@@ -1,0 +1,8 @@
+add_subdirectory(altumira)
+add_subdirectory(geometry)
+add_subdirectory(dataHandling)
+add_subdirectory(projection)
+add_subdirectory(reconstruction)
+if(TOMO_ENABLE_TOY_TEST )
+	add_subdirectory(toys)
+endif()

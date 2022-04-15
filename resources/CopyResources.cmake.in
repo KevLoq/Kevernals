@@ -1,0 +1,38 @@
+#-----------------------------------------------------------------------------------------------------------------------
+# Installation of the resource files
+#
+# This CMakeLists.txt does the following tasks:
+# 1. it retrieves automatically the list of files located in the resource directory
+# 2. the resource files are installed into a resource directory into the build directory if they are different (if the file already exists, the copy is optimised away)
+# 3. the resource files previously installed and are no longer part of the resource directory are deleted from the build directory
+#-----------------------------------------------------------------------------------------------------------------------
+
+set( SOURCE_DIR "@RESOURCE_SOURCE_DIR@" )
+set( INSTALL_DIR "@RESOURCE_INSTALL_DIR@" )
+
+# Retrieve the list of all files in the resource directory
+file( GLOB_RECURSE RESOURCE_FILES
+      LIST_DIRECTORIES true
+      RELATIVE ${SOURCE_DIR}
+      ${SOURCE_DIR}/* )
+
+# Remove the CMakeLists.txt and CopyResources.cmake from the list of resource files retrieved
+list( REMOVE_ITEM RESOURCE_FILES CMakeLists.txt CopyResources.cmake.in )
+
+# Remove files inside folders beginning by a period (.)
+list( FILTER RESOURCE_FILES EXCLUDE REGEX "^\\..*\\/.*$" ) # Regex: begin by a period (.) and has at least 1 slash (/)
+
+# Retrieve the list of all files in the resource directory installed in the build directory
+file( GLOB_RECURSE INSTALLED_RESOURCE_FILES
+      LIST_DIRECTORIES true
+      RELATIVE ${INSTALL_DIR}/resources
+      ${INSTALL_DIR}/resources/* )
+
+# Install missing resource files
+foreach( file ${RESOURCE_FILES} )
+    # Copy the resource file only if the source file is newer than the installed file
+    if( ${SOURCE_DIR}/${file} IS_NEWER_THAN ${INSTALL_DIR}/resources/${file} )
+        execute_process( COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SOURCE_DIR}/${file} ${INSTALL_DIR}/resources/${file} )
+    endif()
+endforeach()
+
