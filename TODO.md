@@ -1,8 +1,9 @@
 # Buld and Debug environment
 
-1. Make Altumira lib optional (as it is commercial lib) and use it only if present
-2. Fix the launch.json : PATH to be set from settings.json or from CMake variables
-3. Fix the problem of #include marked as failing in VS Code intellisense
+1. ~~Make Altumira lib optional (as it is commercial lib) and use it only if present~~
+2. Remove Qt depency
+3. Fix the launch.json : PATH to be set from settings.json or from CMake variables
+4. Fix the problem of #include marked as failing in VS Code intellisense
    
 # Dev
 

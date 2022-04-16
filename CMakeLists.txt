@@ -98,7 +98,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OUTPUT_DIRECTORY}/Debug)   # the corr
 
 # Find Altumira library
 # Note: an imported target is created: Altumira::altumira
-find_package( AltumiraPlus REQUIRED )
+find_package( AltumiraPlus )
 if( AltumiraPlus_FOUND )#
 	add_definitions( -DALTUMIRA_PLUS )
 endif()
