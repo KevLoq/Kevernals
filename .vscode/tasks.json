@@ -6,27 +6,7 @@
             "label": "CMake: build all",
             "command": "build",
             "targets": [
-                "all"
-            ],
-            "group": "build",
-            "problemMatcher": [], 
-        },
-        {
-            "type": "cmake",
-            "label": "CMake: build DisplayStandardVersion",
-            "command": "build",
-            "targets": [
-                "DisplayStandardVersion"
-            ],
-            "group": "build",
-            "problemMatcher": [], 
-        },
-        {
-            "type": "cmake",
-            "label": "CMake: build MySecondSnippet",
-            "command": "build",
-            "targets": [
-                "MySecondSnippet"
+                "ALL_BUILD"
             ],
             "group": "build",
             "problemMatcher": [], 
