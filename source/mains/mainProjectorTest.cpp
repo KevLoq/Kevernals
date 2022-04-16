@@ -3,17 +3,14 @@
 #include "modules/dataHandling/PhantomMaker.h" 
 #include "modules/geometry/TomoGeometry.h"
 #include "modules/reconstruction/Projector.h"
-
-#include <QDebug>
+ 
 #include <vtkImageCast.h>
 #include <vtkImageFlip.h>
 #include <vtkImageLogarithmicScale.h>
 #include <vtkImageShiftScale.h>
 #include <vtkTIFFWriter.h>
 
-#include <chrono>
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <chrono> 
 #include <optional>
 #include <ratio>    // for std::milli
 
@@ -24,7 +21,7 @@ void waitForKeyTyping()
     do
     {
         std::cout << std::endl
-                  << "Press any key to continue...";
+                  << "Gotcha Press any key to continue...";
     } while( std::cin.get() != '\n' );
 }
 
@@ -32,27 +29,7 @@ int main( int argc, char * argv[] )
 {
     Q_UNUSED( argc );
     Q_UNUSED( argv );
-
-
-    //RadonMatrixElement currentElement;
-    //qDebug() << "sizeof( RadonMatrixElement ) = " << sizeof( RadonMatrixElement );
-    //qDebug() << "sizeof( std::vector<RadonMatrixElement> ) = " << sizeof( std::vector<RadonMatrixElement> );
-    //qDebug() << "sizeof( RadonMatrixAggregate ) = " << sizeof( RadonMatrixAggregate );
-    //qDebug() << "sizeof( std::vector<RadonMatrixAggregate> ) = " << sizeof( std::vector<RadonMatrixAggregate> );
-    //auto testSize = 35000000;
-    //auto projectionMatrix = std::make_unique<RadonMatrix>();
-    //projectionMatrix->resize( testSize );
-    //qDebug() << "sizeof( projectionMatrix ) = " << sizeof( projectionMatrix );
-    //for( int i = 0; i < testSize; i++ )
-    //{
-    //    projectionMatrix->at( i ).resize( 120 );
-    //    if( i % 1000000 == 0 )
-    //    {
-    //        qDebug() << i;
-    //    }
-    //}
-
-
+  
     //auto computeGeometry{ true };
     auto doComputePhantom{ true };
     auto doComputeRadonMatrix{ true };
@@ -75,29 +52,29 @@ int main( int argc, char * argv[] )
 
     if( !tomoGeometry->IsValid() )
     {
-        qCritical() << "invalid geometry parsing";
+        std::cout << "invalid geometry parsing" << std::endl;
         waitForKeyTyping();
         return 1;
     }
 
-    qInfo() << "geometry parsed";
+    std::cout << "geometry parsed" << std::endl;
 
-    qInfo() << "data file reading started";
+    std::cout << "data file reading started" << std::endl;
 
     const QString dataFilePath = dataDirPath + rawProjectionDicomFileName;
     DICOMReader dcmReader( tomoGeometry.get() );
     auto dataImageFileResult = dcmReader.Read( dataFilePath );
     if( dataImageFileResult.has_error() )
     {
-        qCritical() << "dataImageFileResult has error";
-        qCritical() << QString::fromStdString( dataImageFileResult.error().message() );
+        std::cout << "dataImageFileResult has error" << std::endl;
+        std::cout << dataImageFileResult.error().message() << std::endl;
         waitForKeyTyping();
         return 1;
     }
 
     if( dataImageFileResult.value() == nullptr )
     {
-        qCritical() << "dataImageFileResult is nullptr";
+        std::cout << "dataImageFileResult is nullptr" << std::endl;
         waitForKeyTyping();
         return 1;
     }
@@ -112,7 +89,7 @@ int main( int argc, char * argv[] )
     imageCastFilter->SetOutputScalarTypeToFloat();
     imageCastFilter->Update();
 
-    qInfo() << "data file reading performed";
+    std::cout << "data file reading performed" << std::endl;
 
     auto logarithmicScalerFilter = vtkSmartPointer<vtkImageLogarithmicScale>::New();
     logarithmicScalerFilter->SetInputConnection( imageCastFilter->GetOutputPort() );
@@ -120,11 +97,11 @@ int main( int argc, char * argv[] )
     logarithmicScalerFilter->Update();
     auto projectionsImage = logarithmicScalerFilter->GetOutput();
 
-    qInfo() << "projection logarithm transformation performed";
+    std::cout << "projection logarithm transformation performed" << std::endl;
 
     if( true )
     {
-        qInfo() << "phantom computation started";
+        std::cout << "phantom computation started" << std::endl;
 
 
         auto nbIterations{ 20 };
@@ -141,7 +118,7 @@ int main( int argc, char * argv[] )
 
         if( resultingVolume == nullptr )
         {
-            qCritical() << "initial data is nullptr";
+            std::cout << "initial data is nullptr" << std::endl;
             waitForKeyTyping();
             return 1;
         }
@@ -150,9 +127,9 @@ int main( int argc, char * argv[] )
         tiffWriterGlobal->SetInputData( resultingVolume );
         tiffWriterGlobal->Write();
 
-        qInfo() << "phantom computation performed";
+        std::cout << "phantom computation performed" << std::endl;
 
-        qInfo() << "reconstruction started";
+        std::cout << "reconstruction started" << std::endl;
 
         Projector projector{ tomoGeometry.get() };
 
@@ -171,7 +148,7 @@ int main( int argc, char * argv[] )
 
             if( currentProjection == nullptr )
             {
-                qCritical() << "current projection is nullptr";
+                std::cout << "current projection is nullptr" << std::endl;
                 waitForKeyTyping();
                 return 1;
             }
@@ -192,7 +169,7 @@ int main( int argc, char * argv[] )
 
             if( errorBackProjection == nullptr )
             {
-                qCritical() << "current backprojection is nullptr";
+                std::cout << "current backprojection is nullptr" << std::endl;
                 waitForKeyTyping();
                 return 1;
             }
@@ -214,13 +191,13 @@ int main( int argc, char * argv[] )
             tiffWriterBackProj->Write();
         }
 
-        qInfo() << "reconstruction performed";
+        std::cout << "reconstruction performed" << std::endl;
 
 
         //auto projectedImageResult = projector.PerformProjection( resultingVolume );
         //if( projectedImageResult == nullptr )
         //{
-        //    qCritical() << QString::fromStdString( "projection failed" );
+        //    std::cout << "projection failed" << std::endl;
         //    waitForKeyTyping();
         //    return 1;
         //}
@@ -235,7 +212,7 @@ int main( int argc, char * argv[] )
         //auto backProjectedImageResult = projector.PerformBackProjection( projectedImageResult );
         //if( backProjectedImageResult == nullptr )
         //{
-        //    qCritical() << QString::fromStdString( "back projection failed" );
+        //    std::cout << "back projection failed"  << std::endl;
         //    waitForKeyTyping();
         //    return 1;
         //}
@@ -254,7 +231,7 @@ int main( int argc, char * argv[] )
 
     //    if( currentProjectionResult.has_error() )
     //    {
-    //        qCritical() << QString::fromStdString( currentProjectionResult.error().message() );
+    //        std::cout <<  currentProjectionResult.error().message()  << std::endl;
     //        qtin.readLine();
     //        return 1;
     //    }
@@ -276,7 +253,7 @@ int main( int argc, char * argv[] )
 
     //    if( errorBackProjectionResult.has_error() )
     //    {
-    //        qCritical() << QString::fromStdString( errorBackProjectionResult.error().message() );
+    //        std::cout << errorBackProjectionResult.error().message() << std::endl;
     //        qtin.readLine();
     //        return 1;
     //    }
@@ -299,24 +276,24 @@ int main( int argc, char * argv[] )
     //    tiffWriterBackProj->Write();
     //}
 
-    //qInfo() << "reconstruction performed";
+    //std::cout << "reconstruction performed" << std::endl;
 
-    //qInfo() << "back projection started";
+    //std::cout << "back projection started" << std::endl;
     //
     //auto backProjectedImageResult = projector.PerformBackProjection( imageCastFilter->GetOutput() );
     //if( backProjectedImageResult.has_error() )
     //{
-    //    qCritical() << "backProjectedImageResult has error";
-    //    qCritical() << QString::fromStdString( backProjectedImageResult.error().message() );
+    //    std::cout << "backProjectedImageResult has error" << std::endl;
+    //    std::cout << backProjectedImageResult.error().message() << std::endl;
     //    qtin.readLine();
     //    return 1;
     //}
 
-    //qInfo() << "back projection performed";
+    //std::cout << "back projection performed" << std::endl;
 
     //if( backProjectedImageResult.value() == nullptr )
     //{
-    //    qCritical() << "backProjectedImage is nullptr";
+    //    std::cout << "backProjectedImage is nullptr";
     //    qtin.readLine();
     //    return 1;
     //}
@@ -329,7 +306,7 @@ int main( int argc, char * argv[] )
     //tiffWriterBackProj00->Write();
 
 
-    //qInfo() << "flips started";
+    //std::cout << "flips started" << std::endl;
 
     //// inversions
     //auto rawflipfilter = vtkSmartPointer<vtkImageFlip>::New();
@@ -344,9 +321,9 @@ int main( int argc, char * argv[] )
     //rawflipfilter2->Update();
     //nextFilterInput = rawflipfilter2->GetOutput();
 
-    //qInfo() << "flips performed";
+    //std::cout << "flips performed" << std::endl;
 
-    //qInfo() << "histo uniformization started";
+    //std::cout << "histo uniformization started" << std::endl;
     ////rescaling for obtaining a complete dynamic range
 
     //auto reconstructionSliceMaxValue = nextFilterInput->GetScalarRange()[1];
@@ -360,7 +337,7 @@ int main( int argc, char * argv[] )
     //auto rescaledAndConvertedReconstructedImage = shiftScaleFilter->GetOutput();
 
     //HistUniformization16Bit( rescaledAndConvertedReconstructedImage );
-    //qInfo() << "histo uniformization performed";
+    //std::cout << "histo uniformization performed" << std::endl;
 
     //auto tiffWriterBackProj = vtkSmartPointer<vtkTIFFWriter>::New();
     //tiffWriterBackProj->SetFileName( "../backProjectedImageProcessed.tiff" );
@@ -371,7 +348,7 @@ int main( int argc, char * argv[] )
     /*
 
     ImageDataPtr phantom;
-    qInfo() << "phantom computation";
+    std::cout << "phantom computation" << std::endl;
     PhantomMaker phantomMaker( tomoGeometry->GetVolume() );
     Pave paveToAdd( Position3D( -25.f, -50.f, 207.f ), WSize3D( 20.f, 40.f, 30.f ) );
     Sphere sphereToAdd( Position3D( 60.f, -100.f, 220.f ), 15.f );
@@ -381,7 +358,7 @@ int main( int argc, char * argv[] )
 
     if( phantom == nullptr )
     {
-        qCritical() << "projection is nullptr";
+        std::cout << "projection is nullptr";
         qtin.readLine();
         return 1;
     }
@@ -389,37 +366,37 @@ int main( int argc, char * argv[] )
     tiffWriterGlobal->SetFileName( "../phantom.tiff" );
     tiffWriterGlobal->SetInputData( phantom );
     tiffWriterGlobal->Write();
-    qInfo() << "phantom done";
+    std::cout << "phantom done" << std::endl;
 
 
     //RadonMatrixManager radonMatrixManager( tomoGeometry.get() );
     //auto matrixComputationResult = radonMatrixManager.ComputeProjectionMatrix( RadonMatrixManager::RadonMatrixComputationMethod::RayTracing );
     //if( matrixComputationResult.has_error() )
     //{
-    //    qCritical() << QString::fromStdString( matrixComputationResult.error().message() );
+    //    std::cout << matrixComputationResult.error().message() << std::endl;
     //    qtin.readLine();
     //    return 1;
     //}
-    //qInfo() << "ComputeProjectionMatrix done";
+    //std::cout << "ComputeProjectionMatrix done" << std::endl;
     //auto projMatrixPtr = matrixComputationResult.value().get();
 
     Projector projector{ tomoGeometry.get() };
 
-    qInfo() << "projection started";
+    std::cout << "projection started" << std::endl;
     auto projectedImageResult = projector.PerformProjection( phantom );
     if( projectedImageResult.has_error() )
     {
-        qCritical() << "projectedImageResult has error";
-        qCritical() << QString::fromStdString( projectedImageResult.error().message() );
+        std::cout << "projectedImageResult has error" << std::endl;
+        std::cout << projectedImageResult.error().message()  << std::endl;
         qtin.readLine();
         return 1;
     }
 
-    qInfo() << "projection performed";
+    std::cout << "projection performed" << std::endl;
 
     if( projectedImageResult.value() == nullptr )
     {
-        qCritical() << "projectedImage is nullptr";
+        std::cout << "projectedImage is nullptr" << std::endl;
         qtin.readLine();
         return 1;
     }
@@ -428,22 +405,22 @@ int main( int argc, char * argv[] )
     tiffWriterProj->SetInputData( projectedImageResult.value() );
     tiffWriterProj->Write();
 
-    qInfo() << "back projection started";
+    std::cout << "back projection started" << std::endl;
 
     auto backProjectedImageResult = projector.PerformBackProjection( projectedImageResult.value() );
     if( backProjectedImageResult.has_error() )
     {
-        qCritical() << "backProjectedImageResult has error";
-        qCritical() << QString::fromStdString( backProjectedImageResult.error().message() );
+        std::cout << "backProjectedImageResult has error" << std::endl;
+        std::cout << backProjectedImageResult.error().message() << std::endl;
         qtin.readLine();
         return 1;
     }
 
-    qInfo() << "back projection performed";
+    std::cout << "back projection performed" << std::endl;
 
     if( backProjectedImageResult.value() == nullptr )
     {
-        qCritical() << "backProjectedImage is nullptr";
+        std::cout << "backProjectedImage is nullptr" << std::endl;
         qtin.readLine();
         return 1;
     }
@@ -456,27 +433,27 @@ int main( int argc, char * argv[] )
     //auto backProjMatrixComputationResult = radonMatrixManager.ComputeItsBackProjectionMatrix( projMatrixPtr );
     //if( backProjMatrixComputationResult.has_error() )
     //{
-    //    qCritical() << QString::fromStdString( backProjMatrixComputationResult.error().message() );
+    //    std::cout << backProjMatrixComputationResult.error().message() << std::endl;
     //    qtin.readLine();
     //    return 1;
     //}
-    //qInfo() << "ComputeBackProjectionMatrix done";
+    //std::cout << "ComputeBackProjectionMatrix done" << std::endl;
 
     //auto backProjMatrixPtr = backProjMatrixComputationResult.value().get();
 
     //auto backProjectedImageResult = projector.PerformBackprojection( backProjMatrixPtr, projectedImageResult.value() );
     //if( backProjectedImageResult.has_error() )
     //{
-    //    qCritical() << "backProjectedImageResult has error";
-    //    qCritical() << QString::fromStdString( backProjectedImageResult.error().message() );
+    //    std::cout << "backProjectedImageResult has error" << std::endl;
+    //    std::cout << backProjectedImageResult.error().message() << std::endl;
     //    qtin.readLine();
     //    return 1;
     //}
 
-    //qInfo() << "backprojection performed";
+    //std::cout << "backprojection performed" << std::endl;
     //if( backProjectedImageResult.value() == nullptr )
     //{
-    //    qCritical() << "projectedImage is nullptr";
+    //    std::cout << "projectedImage is nullptr" << std::endl;
     //    qtin.readLine();
     //    return 1;
     //}
@@ -486,7 +463,7 @@ int main( int argc, char * argv[] )
     //tiffWriterBackProj->Write();
     
     */
-    qInfo() << " ---  DONE  ---  ;)";
+    std::cout << " ---  DONE  ---  ;)" << std::endl;
     waitForKeyTyping();
     return 0;
 }

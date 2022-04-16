@@ -5,8 +5,6 @@
 #include <vtkImageData.h>
 #include <vtkSmartPointer.h>
 
-//#include <cuda_runtime.h>
-
 struct dim3;
 struct float3;
 class Projector

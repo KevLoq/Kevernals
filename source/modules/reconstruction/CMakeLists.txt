@@ -4,8 +4,7 @@ if(TOMO_ENABLE_PROJECTOR_TEST)
 									CudaErrorHandler.h									
 									)
 
-	target_link_libraries( Projector 		Qt5::Core
-											TomoGeometry
+	target_link_libraries( Projector 		TomoGeometry
 											ErrorHandling
 											VTK::CommonCore
 											VTK::IOImage
