@@ -194,7 +194,8 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/source )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR}/source )
 
 #include_directories( ${EIGEN3_DIR} )
-
+include_directories( ${CUDA_INCLUDE_DIRS} )
+ 
 
 add_subdirectory(source)
 
