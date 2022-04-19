@@ -60,3 +60,8 @@ if( ML_ENABLE_TRIAL )
 	endif (MSVC)
 	
 endif()
+
+add_executable(SimplestProgram mainSimple.cpp) 
+
+target_link_libraries( SimplestProgram VTK::CommonCore VTK::IOImage )
+	
