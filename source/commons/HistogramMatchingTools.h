@@ -1,16 +1,14 @@
 #pragma once
+ 
+#include "commons/Maths.h" 
 
-#include "commons/ImageDataPtr.h"
-#include "commons/Maths.h"
-
-#include <QDebug>
-#include <QString>
-#include <QVector>
-
+#include <vtkImageData.h>
+#include <vtkSmartPointer.h> 
 #include <algorithm>
+#include <iostream>
 #include <cmath>
 
-inline std::vector<int> GetHist16Bit( const ImageDataPtr & p_src )
+inline std::vector<int> GetHist16Bit( const vtkSmartPointer<vtkImageData> & p_src )
 {
     const auto hist_sz = static_cast<int>( std::pow( 2, 16 ) );
 
@@ -40,57 +38,17 @@ inline std::vector<int> GetHist16Bit( const ImageDataPtr & p_src )
     }
     return hist;
 }
-
-//inline void EqualizeHist16Bit( const cv::Mat & p_src, cv::Mat & p_dst )
-//{
-//    p_dst = p_src.clone();
-//
-//    auto hist = GetHist16Bit( p_src );
-//    auto histSize = static_cast<int>( hist.size() );
-//    QVector<int> lut( histSize );
-//
-//    auto i = 0;
-//    while( hist[i] == 0 )
-//    {
-//        ++i;
-//    }
-//
-//    auto total = static_cast<int>( p_src.total() );
-//    if( hist[i] == total )
-//    {
-//        p_dst.setTo( i );
-//        return;
-//    }
-//
-//    double scale = static_cast<double>( histSize - 1 ) / static_cast<double>( total - hist[i] );
-//    auto sum = 0;
-//
-//    for( lut[i++] = 0; i < histSize; ++i )
-//    {
-//        sum += hist[i];
-//        lut[i] = cv::saturate_cast<ushort>( sum * scale );
-//    }
-//
-//    for( int y = 0; y < p_src.rows; y++ )
-//    {
-//        for( int x = 0; x < p_src.cols; x++ )
-//        {
-//            p_dst.at<unsigned short int>( y, x ) = lut[(int)p_src.at<unsigned short int>( y, x )];
-//        }
-//    }
-//}
-
-
-inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, ImageDataPtr p_matToAdapt )
+  
+inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, vtkSmartPointer<vtkImageData> p_matToAdapt )
 {
     if( p_matToAdapt == nullptr )
     {
-        qDebug() << "HistMatching16Bit: image to adapt is not ushort";
+        std::cout << "HistMatching16Bit: image to adapt is not ushort" << std::endl;
         return;
     }
     if( p_matToAdapt->GetScalarType() != VTK_UNSIGNED_SHORT )
     {
-        qDebug() << "HistMatching16Bit: image to adapt is not ushort";
+        std::cout << "HistMatching16Bit: image to adapt is not ushort" << std::endl;
         return;
     }
 
@@ -100,7 +58,7 @@ inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, ImageDataPt
     auto originalHistSize = static_cast<int>( originalHistogram.size() );
     if( originalHistSize != expectedHistSize )    // hist sizes mismatch
     {
-        qDebug() << "HistMatching16Bit: hist sizes mismatch";
+        std::cout << "HistMatching16Bit: hist sizes mismatch" << std::endl;
         return;
     }
 
@@ -199,7 +157,7 @@ inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, ImageDataPt
 }
 
 
-inline void HistUniformization16Bit( ImageDataPtr p_matToAdapt )
+inline void HistUniformization16Bit( vtkSmartPointer<vtkImageData> p_matToAdapt )
 {
     const auto hist_sz = static_cast<int>( std::pow( 2, 16 ) );
     std::vector<int> uniformHist( hist_sz, 1 );
@@ -207,7 +165,7 @@ inline void HistUniformization16Bit( ImageDataPtr p_matToAdapt )
 }
 
 
-inline void HistHalfTop16Bit( ImageDataPtr p_matToAdapt )
+inline void HistHalfTop16Bit( vtkSmartPointer<vtkImageData> p_matToAdapt )
 {
     const auto hist_sz = static_cast<int>( std::pow( 2, 16 ) );
     std::vector<int> uniformHist( hist_sz, 1 );
@@ -217,9 +175,4 @@ inline void HistHalfTop16Bit( ImageDataPtr p_matToAdapt )
     }
     HistMatching16Bit( uniformHist, p_matToAdapt );
 }
-
-//
-//inline void HistMatching16Bit( const cv::Mat & p_expectedMat, cv::Mat & p_matToAdapt )
-//{
-//    HistMatching16Bit( GetHist16Bit( p_expectedMat ), p_matToAdapt );
-//}
+ 
