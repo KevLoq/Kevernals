@@ -1,4 +1,3 @@
-add_subdirectory(altumira)
 add_subdirectory(geometry)
 add_subdirectory(dataHandling)
 add_subdirectory(projection)
