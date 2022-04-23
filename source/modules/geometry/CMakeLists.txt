@@ -18,13 +18,3 @@ if(TOMO_ENABLE_PHANTOM_MAKER_TEST OR TOMO_ENABLE_PROJECTOR_TEST OR TOMO_ENABLE_R
 											Qt5::Xml
 											ErrorHandling )
 endif()
-
-
-add_library( RayProjectionGeometry 		VolumeData.h
-										VolumeData.cpp
-										ProjectionData.h
-										ProjectionData.cpp )
-									
-target_link_libraries( RayProjectionGeometry	VTK::CommonCore
-												VTK::IOImage
-												VTK::CommonDataModel )
