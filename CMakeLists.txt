@@ -20,10 +20,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(CMAKE_CUDA_STANDARD_REQUIRED true)
-
-message( STATUS "CMAKE_BUILD_DIRECTORY ${CMAKE_BUILD_DIRECTORY}" )
-message( STATUS "OUTPUT_DIRECTORY ${OUTPUT_DIRECTORY}" )
-message( STATUS "PROJECT_BINARY_DIR ${PROJECT_BINARY_DIR}" )
+ 
 
 # Vtk lib finding
 message( STATUS "VTK_DIR ${VTK_DIR}" )
@@ -69,13 +66,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PROJECT_BINARY_DIR}/Debug)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PROJECT_BINARY_DIR}/Debug)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${PROJECT_BINARY_DIR}/Debug)   # the corresponding import library of a dll is treated as an archive target on windows
 
-
-# Find Altumira library
-# Note: an imported target is created: Altumira::altumira
-find_package( AltumiraPlus )
-if( AltumiraPlus_FOUND )#
-	add_definitions( -DALTUMIRA_PLUS )
-endif()
 	
 # Find Qt5 libraries
 # Note: imported target names should be preferred
