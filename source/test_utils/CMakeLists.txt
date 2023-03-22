@@ -1,0 +1,2 @@
+kevernalsAddHeaderOnly( GenericMethods GenericMethods.h)
+kevernalsAddHeaderOnly( TestInitializer TestInitializer.h)

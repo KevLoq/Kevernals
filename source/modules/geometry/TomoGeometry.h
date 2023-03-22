@@ -1,28 +1,34 @@
 #pragma once
 
-#include "commons/GeometryUtils.h"
+#include "modules/geometry/Pixel.h"
+#include "modules/geometry/PixelOnProjection.h"
+#include "modules/geometry/PixelSpacing.h"
+#include "modules/geometry/Position2D.h"
+#include "modules/geometry/Position3D.h"
+#include "modules/geometry/Size2D.h"
+#include "modules/geometry/Size3D.h"
 #include "modules/geometry/TomoProjectionsSet.h"
 #include "modules/geometry/TomoTable.h"
 #include "modules/geometry/TomoVolume.h"
-
-#include <QRect>
-#include <QString>
+#include "modules/geometry/VoxelSpacing.h"
+#include "modules/geometry/WSize2D.h"
+#include "modules/geometry/WSize3D.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 class TomoGeometry
 {
 public:
-    TomoGeometry( const QString & p_xmlGeometryFilePath );
+    TomoGeometry( const std::string & p_xmlGeometryFilePath );
     ~TomoGeometry() = default;
 
+    friend std::ostream & operator<<( std::ostream & p_outputStream, TomoGeometry const & p_data );
     bool IsValid() const { return m_isValid; }
 
     // accessors
-    QString filePath() const { return m_filePath; }
-
-    Position3D rotationCenter() const;
+    std::string filePath() const { return m_filePath; }
 
     // sources geometric features
     std::vector<float> sourcesYPositions() const;
@@ -71,6 +77,9 @@ public:
     std::vector<float> volumeXs() const;
     std::vector<Position3D> volumeGridPositions() const;
 
+    WSize3D fulcrum() const { return m_fulcrum; }
+    WSize3D rotationCenter() const { return m_fulcrum; }
+
     // mainly used for parallelization
     std::vector<int> volumeVoxelsIndices() const;
 
@@ -82,21 +91,17 @@ public:
     Pixel GetProjectionROIsBLPixelPositionOnDetector() const { return m_projectionROIsBLPixelPositionOnDetector; }
 
 private:
-    QString m_filePath;    // OK
+    std::string m_filePath;    // OK
 
     // volume geometric features
     std::unique_ptr<TomoVolume> m_volume;
     std::unique_ptr<TomoProjectionsSet> m_projections;
     std::unique_ptr<TomoProjectionsSet> m_projectionsRois;
     std::unique_ptr<TomoTable> m_table;
-    Pixel m_projectionROIsBLPixelPositionOnDetector;
+    Pixel m_projectionROIsBLPixelPositionOnDetector{ 0, 0 };
+    WSize3D m_fulcrum{ 0.F, 0.F, 0.F };
 
     bool m_isValid{ false };
-
-    // parsing utils
-    Position3D QStringToPosition3D( const QString & p_positionString, bool & p_done ) const;
-    Size3D QStringToSize3D( const QString & p_positionString, bool & p_done ) const;
-    QRect QStringToQRect( const QString & p_positionString, bool & p_done ) const;
 };
 
 inline bool operator==( TomoGeometry const & p_tomoGeometryA, TomoGeometry const & p_tomoGeometryB )
@@ -108,54 +113,11 @@ inline bool operator!=( TomoGeometry const & p_tomoGeometryA, TomoGeometry const
 {
     return !( p_tomoGeometryA == p_tomoGeometryB );
 }
-//inline QDebug operator<<( QDebug p_debug, const TomoGeometry & p_tomoGeometry )
-//{
-//    QDebugStateSaver saver( p_debug );
-//    p_debug.nospace() << "___________________GEOMETRY INFORMATION (START)__________________" << Qt::endl;
-//
-//
-//    p_debug.nospace() << "Rotation Center In World: (" << p_tomoGeometry.rotationCenterInWorld[0] << " , " << p_tomoGeometry.rotationCenterInWorld[1]
-//                      << " , " << p_tomoGeometry.rotationCenterInWorld[2] << ")" << Qt::endl
-//                      << Qt::endl;
-//
-//
-//    p_debug.nospace() << "Detector Dimensions: (" << p_tomoGeometry.projectionsSizeInPixels[0] << ","
-//                      << p_tomoGeometry.projectionsSizeInPixels[1] << ")" << Qt::endl;
-//    p_debug.nospace() << "Detector Pixel Spacing: (" << p_tomoGeometry.projectionPixelSpacing[0] << ","
-//                      << p_tomoGeometry.projectionPixelSpacing[1] << ")" << Qt::endl
-//                      << Qt::endl;
-//
-//    if( p_tomoGeometry.xRaySourcesPositionsInWorld.size() == p_tomoGeometry.detectorCenterPositionsInWorld.size() )
-//    {
-//        for( unsigned projectionIndex{ 0 }; projectionIndex < p_tomoGeometry.xRaySourcesPositionsInWorld.size(); ++projectionIndex )
-//        {
-//            p_debug.nospace() << "Projection " << projectionIndex << ":" << Qt::endl;
-//            p_debug.nospace() << "Source Position In World: (" << p_tomoGeometry.xRaySourcesPositionsInWorld[projectionIndex][0] << ","
-//                              << p_tomoGeometry.xRaySourcesPositionsInWorld[projectionIndex][1] << ","
-//                              << p_tomoGeometry.xRaySourcesPositionsInWorld[projectionIndex][2] << ")" << Qt::endl;
-//            p_debug.nospace() << "Detector Center Position In World: (" << p_tomoGeometry.detectorCenterPositionsInWorld[projectionIndex][0] << ","
-//                              << p_tomoGeometry.detectorCenterPositionsInWorld[projectionIndex][1] << ","
-//                              << p_tomoGeometry.detectorCenterPositionsInWorld[projectionIndex][2] << ")" << Qt::endl;
-//        }
-//        p_debug.nospace() << Qt::endl;
-//    }
-//
-//
-//    p_debug.nospace() << "Roi vertices: (" << p_tomoGeometry.projectionsRoi[0][0] << ","
-//                      << p_tomoGeometry.projectionsRoi[0][1] << ")   (" << p_tomoGeometry.projectionsRoi[1][0] << ","
-//                      << p_tomoGeometry.projectionsRoi[1][1] << ")   (" << p_tomoGeometry.projectionsRoi[2][0] << ","
-//                      << p_tomoGeometry.projectionsRoi[2][1] << ")   (" << p_tomoGeometry.projectionsRoi[3][0] << ","
-//                      << p_tomoGeometry.projectionsRoi[3][1] << ")   (" << Qt::endl;
-//    p_debug.nospace() << "Reconstruction Volume Center Position In World: (" << p_tomoGeometry.reconstructionVolumeCenterPositionInWorld[0]
-//                      << " , " << p_tomoGeometry.reconstructionVolumeCenterPositionInWorld[1] << " , "
-//                      << p_tomoGeometry.reconstructionVolumeCenterPositionInWorld[2] << ")" << Qt::endl;
-//    p_debug.nospace() << "Reconstruction Volume Dimensions: (" << p_tomoGeometry.reconstructionVolumeSizeInPixels[0]
-//                      << " , " << p_tomoGeometry.reconstructionVolumeSizeInPixels[1] << " , "
-//                      << p_tomoGeometry.reconstructionVolumeSizeInPixels[2] << ")" << Qt::endl;
-//    p_debug.nospace() << "Reconstruction Volume Pixel Spacing: (" << p_tomoGeometry.reconstructionVolumePixelSpacing[0]
-//                      << " , " << p_tomoGeometry.reconstructionVolumePixelSpacing[1] << " , "
-//                      << p_tomoGeometry.reconstructionVolumePixelSpacing[2] << ")" << Qt::endl;
-//
-//    p_debug.nospace() << "___________________GEOMETRY INFORMATION (END)____________________" << Qt::endl;
-//    return p_debug;
-//}
+
+inline std::ostream & operator<<( std::ostream & p_outputStream, TomoGeometry const & p_data )
+{
+    return p_outputStream << "volume " << *p_data.m_volume << std::endl
+                          << "projections: " << *p_data.m_projections << std::endl
+                          << "projections Rois: " << *p_data.m_projectionsRois << std::endl
+                          << "table: " << *p_data.m_table << std::endl;
+}

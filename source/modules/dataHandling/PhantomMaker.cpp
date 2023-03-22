@@ -1,7 +1,5 @@
 #include "modules/dataHandling/PhantomMaker.h"
 
-#include <QDebug>
-
 #include <algorithm>
 #include <execution>
 #include <numeric>

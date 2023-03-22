@@ -1,37 +1,38 @@
 #include "modules/dataHandling/PhantomMaker.h"
 #include "modules/geometry/TomoGeometry.h"
-
-#include <QDebug>
+#include "commons/GlobalUtils.h"
+ 
 #include <vtkImageCast.h>
 #include <vtkTIFFWriter.h>
 
+#include <iostream>
+#include <string>
 #include <chrono>
 #include <optional>
 #include <ratio>    // for std::milli
 
 #define writeTestImages_
-
-QTextStream qtin( stdin );
+ 
 
 int main( int argc, char * argv[] )
 {
-    Q_UNUSED( argc );
-    Q_UNUSED( argv );
+    (void) argc ;
+    (void) argv ;
 
-    QString geometryXmlFilePath{ "C:/Users/loquin.k/Documents/tomosynthesis_data/tomos_geometry_test.xml" };
+    std::string geometryXmlFilePath{ "C:/Users/loquin.k/Documents/tomosynthesis_data/tomos_geometry_test.xml" };
     auto tomoGeometry = std::make_unique<TomoGeometry>( geometryXmlFilePath );
 
     if( !tomoGeometry->IsValid() )
     {
-        qCritical() << "invalid geometry pasring";
-        qtin.readLine();
+        std::cout << "invalid geometry parsing" << std::endl ;
+        glob::WaitForKeyTyping();
         return 1;
     }
 
-    qInfo() << "geometry parsed";
+    std::cout << "geometry parsed" << std::endl;
 
     ImageDataPtr phantom;
-    qInfo() << "phantom computation";
+    std::cout << "phantom computation" << std::endl;
     PhantomMaker phantomMaker( tomoGeometry->GetVolume() );
     Pave paveToAdd( Position3D( -25.f, -50.f, 207.f ), WSize3D( 20.f, 40.f, 30.f ) );
     Sphere sphereToAdd( Position3D( 60.f, -100.f, 220.f ), 15.f );
@@ -41,19 +42,19 @@ int main( int argc, char * argv[] )
 
     if( phantom == nullptr )
     {
-        qCritical() << "projection is nullptr";
-        qtin.readLine();
+        std::cout << "projection is nullptr" << std::endl;
+        glob::WaitForKeyTyping();
         return 1;
     }
     auto tiffWriterGlobal = vtkSmartPointer<vtkTIFFWriter>::New();
-    QString sliceFilename{ "../phantom.tiff" };
-    tiffWriterGlobal->SetFileName( sliceFilename.toStdString().c_str() );
+    std::string sliceFilename{ "../phantom.tiff" };
+    tiffWriterGlobal->SetFileName( sliceFilename.c_str() );
     tiffWriterGlobal->SetInputData( phantom );
     tiffWriterGlobal->Write();
-    qInfo() << "phantom done";
+    std::cout << "phantom done" << std::endl;
 
 
-    qInfo() << " ---  DONE  ---  ;)";
-    qtin.readLine();
+    std::cout << " ---  DONE  ---  ;)" << std::endl;
+    glob::WaitForKeyTyping();
     return 0;
 }

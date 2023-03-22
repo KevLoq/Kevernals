@@ -1,6 +1,11 @@
 #pragma once
 
-#include "commons/GeometryUtils.h"
+#include "modules/geometry/PixelOnProjection.h"
+#include "modules/geometry/Position2D.h"
+#include "modules/geometry/Size2D.h"
+#include "modules/geometry/WSize2D.h"
+#include "modules/geometry/PixelSpacing.h"
+#include "modules/geometry/Pixel.h"
 
 #include <vector>
 
@@ -14,6 +19,7 @@ public:
     TomoProjectionsSet( const std::vector<Position2D> & p_bottomLeftpositions, const WSize2D & p_wsize, const PixelSpacing & p_pixelSpacing );
     TomoProjectionsSet( const std::vector<Position2D> & p_bottomLeftpositions, const Size2D & p_size, const PixelSpacing & p_pixelSpacing );
 
+    friend std::ostream &operator<<(std::ostream &p_outputStream, TomoProjectionsSet const & p_data);
     TomoProjectionsSet & operator=( const TomoProjectionsSet & p_originalTomoProjectionsSet );
 
     void SetPixelSpacingAndUpdateWSize( const PixelSpacing & p_pixelSpacing );
@@ -47,13 +53,20 @@ private:
 
 
     std::vector<Position2D> m_bottomLeftPositions;
-    Size2D m_size;
-    WSize2D m_wSize;
-    PixelSpacing m_pixelSpacing;
+    Size2D m_size{0,0};
+    WSize2D m_wSize{0.F,0.F};
+    PixelSpacing m_pixelSpacing{0.F,0.F};
     std::vector<std::vector<float>> m_xPositions;
     std::vector<std::vector<float>> m_yPositions;
     std::vector<Position2D> m_projectionPositions;
     std::vector<PixelOnProjection> m_projectionIndiceAndPixels;
     std::vector<int> m_projectionPixelsIndices;
-    int m_nProjections;
+    int m_nProjections; 
 };
+
+
+inline std::ostream &operator<<(std::ostream &p_outputStream, TomoProjectionsSet const & p_data) { 
+    return p_outputStream   << "nb Projections: " << p_data.m_nProjections << std::endl
+                            << "size: " << p_data.m_wSize << " ; pixels size: " << p_data.m_size << " and pixels spacing: " << p_data.m_pixelSpacing << std::endl
+                            << "bottom left position: " << p_data.m_bottomLeftPositions << std::endl;
+}

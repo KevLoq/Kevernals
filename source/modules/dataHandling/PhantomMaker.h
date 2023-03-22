@@ -1,6 +1,8 @@
 #pragma once
 
-#include "commons/GeometryUtils.h"
+#include "modules/geometry/Pave.h"
+#include "modules/geometry/Sphere.h"
+#include "modules/geometry/Cylinder.h"
 #include "commons/ImageDataPtr.h"
 #include "modules/geometry/TomoVolume.h"
 

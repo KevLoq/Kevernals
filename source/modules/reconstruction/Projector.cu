@@ -879,9 +879,9 @@ vtkSmartPointer<vtkImageData>  Projector::PerformProjection( vtkSmartPointer<vtk
     volumeDimensions.z = m_tomoGeometry->GetVolume()->GetSize3D().z;
 
     float3 volumeOrigin;
-    volumeOrigin.x = m_tomoGeometry->GetVolume()->GetBLF().x;
-    volumeOrigin.y = m_tomoGeometry->GetVolume()->GetBLF().y;
-    volumeOrigin.z = m_tomoGeometry->GetVolume()->GetBLF().z;
+    volumeOrigin.x = m_tomoGeometry->GetVolume()->GetBottomLeftFront().x;
+    volumeOrigin.y = m_tomoGeometry->GetVolume()->GetBottomLeftFront().y;
+    volumeOrigin.z = m_tomoGeometry->GetVolume()->GetBottomLeftFront().z;
 
     float3 volumeVoxelsSpacing;
     volumeVoxelsSpacing.x = m_tomoGeometry->GetVolume()->GetVoxelSpacing().x;
@@ -973,10 +973,10 @@ vtkSmartPointer<vtkImageData>  Projector::PerformProjection( vtkSmartPointer<vtk
     std::cout << cudaGetErrorName( errorCode ) << std::endl;
     std::cout << cudaGetErrorString( errorCode ) << std::endl;
 
-    auto tiffWriterOutput = vtkSmartPointer<vtkTIFFWriter>::New();
-    tiffWriterOutput->SetFileName( "../Output.tiff" );
-    tiffWriterOutput->SetInputData( outputImage );
-    tiffWriterOutput->Write();
+    // auto tiffWriterOutput = vtkSmartPointer<vtkTIFFWriter>::New();
+    // tiffWriterOutput->SetFileName( "../Output.tiff" );
+    // tiffWriterOutput->SetInputData( outputImage );
+    // tiffWriterOutput->Write();
 
     checkCudaErrors( cudaFree( d_sourcePositionsInWorld ) );
     free( sourcePositionsInWorld );
@@ -1044,9 +1044,9 @@ vtkSmartPointer<vtkImageData>  Projector::PerformBackProjection( vtkSmartPointer
     volumeDimensions.z = m_tomoGeometry->GetVolume()->GetSize3D().z;
 
     float3 volumeOrigin;
-    volumeOrigin.x = m_tomoGeometry->GetVolume()->GetBLF().x;
-    volumeOrigin.y = m_tomoGeometry->GetVolume()->GetBLF().y;
-    volumeOrigin.z = m_tomoGeometry->GetVolume()->GetBLF().z;
+    volumeOrigin.x = m_tomoGeometry->GetVolume()->GetBottomLeftFront().x;
+    volumeOrigin.y = m_tomoGeometry->GetVolume()->GetBottomLeftFront().y;
+    volumeOrigin.z = m_tomoGeometry->GetVolume()->GetBottomLeftFront().z;
 
     float3 volumeVoxelsSpacing;
     volumeVoxelsSpacing.x = m_tomoGeometry->GetVolume()->GetVoxelSpacing().x;
@@ -1144,10 +1144,10 @@ vtkSmartPointer<vtkImageData>  Projector::PerformBackProjection( vtkSmartPointer
     std::cout << cudaGetErrorName( errorCode ) << std::endl;
     std::cout << cudaGetErrorString( errorCode ) << std::endl;
 
-    auto tiffWriterOutput = vtkSmartPointer<vtkTIFFWriter>::New();
-    tiffWriterOutput->SetFileName( "../Output.tiff" );
-    tiffWriterOutput->SetInputData( outputImage );
-    tiffWriterOutput->Write();
+    // auto tiffWriterOutput = vtkSmartPointer<vtkTIFFWriter>::New();
+    // tiffWriterOutput->SetFileName( "../Output.tiff" );
+    // tiffWriterOutput->SetInputData( outputImage );
+    // tiffWriterOutput->Write();
 
     checkCudaErrors( cudaFree( d_sourcePositionsInWorld ) );
     free( sourcePositionsInWorld );

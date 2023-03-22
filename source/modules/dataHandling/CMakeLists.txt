@@ -3,11 +3,11 @@ if(TOMO_ENABLE_PHANTOM_MAKER_TEST OR TOMO_ENABLE_PROJECTOR_TEST)
 	add_library( PhantomMaker 	PhantomMaker.cpp
 								PhantomMaker.h )
 
-	target_link_libraries( PhantomMaker		Qt5::Core
-											VTK::CommonCore
+	target_link_libraries( PhantomMaker		VTK::CommonCore
 											VTK::IOImage
 											VTK::ImagingMath
 											VTK::CommonDataModel
+											BasicGeometry
 											TomoGeometry
 											)
 endif()
@@ -17,8 +17,8 @@ endif()
 								DICOMReaderErrorCode.h
 								)
 
-	target_link_libraries( DICOMReader		Qt5::Core
-											VTK::CommonCore
+	target_link_libraries( DICOMReader		VTK::CommonCore
 											VTK::DICOM
+											VTK::FiltersCore
 											TomoGeometry
 											) 

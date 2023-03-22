@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <vector>
 
 inline std::vector<int> GetHist16Bit( const vtkSmartPointer<vtkImageData> & p_src )
 {
@@ -43,12 +44,12 @@ inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, vtkSmartPoi
 {
     if( p_matToAdapt == nullptr )
     {
-        std::cout << "HistMatching16Bit: image to adapt is not ushort" << std::endl;
+        std::cout << "HistMatching16Bit: image to adapt is not unsigned short" << std::endl;
         return;
     }
     if( p_matToAdapt->GetScalarType() != VTK_UNSIGNED_SHORT )
     {
-        std::cout << "HistMatching16Bit: image to adapt is not ushort" << std::endl;
+        std::cout << "HistMatching16Bit: image to adapt is not unsigned short" << std::endl;
         return;
     }
 
@@ -62,7 +63,7 @@ inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, vtkSmartPoi
         return;
     }
 
-    std::vector<ushort> lut( expectedHistSize, 0 );
+    std::vector<unsigned short> lut( expectedHistSize, 0 );
 
     auto firstNonNullIndex = 0;
     while( firstNonNullIndex < expectedHistSize && p_expectedHistogram[firstNonNullIndex] == 0 )
@@ -95,7 +96,7 @@ inline void HistMatching16Bit( std::vector<int> p_expectedHistogram, vtkSmartPoi
     // Thue we remove them. This removal makes it compulsory to renormalize the cdf
     p_expectedHistogram[0] = 0;
     originalHistogram[0] = 0;
-    lut[0] = static_cast<ushort>( 0 );
+    lut[0] = static_cast<unsigned short>( 0 );
 
     std::vector<double> expectedCumulativeDistribution( expectedHistSize, 0 );
     std::vector<double> originalCumulativeDistribution( originalHistSize, 0 );

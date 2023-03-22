@@ -155,7 +155,7 @@ Position2D TomoProjectionsSet::GetPosition( int p_projectionIndex, Pixel p_pixel
 }
 Pixel TomoProjectionsSet::GetPixel( int p_projectionIndex, Position2D p_pixelPosition ) const
 {
-    Pixel pixel;
+    Pixel pixel(0,0);
     pixel.x = static_cast<int>( ( p_pixelPosition.x - m_bottomLeftPositions.at( p_projectionIndex ).x ) / m_pixelSpacing.x );
     pixel.y = static_cast<int>( ( p_pixelPosition.y - m_bottomLeftPositions.at( p_projectionIndex ).y ) / m_pixelSpacing.y );
     return pixel;
@@ -213,15 +213,17 @@ void TomoProjectionsSet::UpdatePositions()
 
 void TomoProjectionsSet::UpdateWSize()
 {
-    m_wSize = ComputeWSize2D( m_size, m_pixelSpacing );
+    m_wSize = WSize2D( m_pixelSpacing, m_size );
 }
 void TomoProjectionsSet::UpdateSize()
 {
-    m_size = ComputeSize2D( m_wSize, m_pixelSpacing );
+    bool fake;
+    m_size = Size2D::FromPixelSpacingAndSizeInWorld( m_pixelSpacing, m_wSize, fake);
 }
 void TomoProjectionsSet::UpdatePixelSpacing()
 {
-    m_pixelSpacing = ComputePixelSpacing( m_wSize, m_size );
+    bool fake;
+    m_pixelSpacing = PixelSpacing::FromSizes( m_size, m_wSize, fake);
 }
 
 inline bool operator==( TomoProjectionsSet const & p_tomoProjectionsSetA, TomoProjectionsSet const & p_tomoProjectionsSetB )

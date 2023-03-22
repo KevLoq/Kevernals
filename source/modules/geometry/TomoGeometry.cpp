@@ -2,478 +2,438 @@
 
 #include "modules/geometry/TomoGeometry.h"
 
-#include <QDebug>
-#include <QDomDocument>
-#include <QFile>
+#include "commons/GlobalUtils.h"
+#include "commons/tinyXML/tinyxml2.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <iostream>
 
-TomoGeometry::TomoGeometry( const QString & p_xmlGeometryFilePath )
+TomoGeometry::TomoGeometry( const std::string & p_xmlGeometryFilePath )
 {
     /***************************
     xml file check
     */
-    QFile xmlGeometryFile{ p_xmlGeometryFilePath };
-    QDomDocument xmlDoc( "manifest" );
-    if( !xmlGeometryFile.exists() && !xmlGeometryFile.open( QIODevice::ReadOnly ) )
+    tinyxml2::XMLDocument doc;
+    auto xmlError = doc.LoadFile( p_xmlGeometryFilePath.c_str() );
+    if( xmlError != tinyxml2::XMLError::XML_SUCCESS )
     {
-        return;
-    }
-    if( !xmlDoc.setContent( &xmlGeometryFile ) )
-    {
-        return;
-    }
-    xmlGeometryFile.close();
-
-    auto geometryElem = xmlDoc.documentElement();
-    if( geometryElem.isNull() )
-    {
+        std::cout << "XML Error: " << xmlError << std::endl;
         return;
     }
 
     m_filePath = p_xmlGeometryFilePath;
 
+    auto * rootElement = doc.RootElement();
+    if( rootElement == nullptr )
+    {
+        std::cout << "XML Error: no root element" << std::endl;
+        return;
+    }
+
+
+    /***************************
+    Fulcrum (rotation center)
+    */
+    auto * rotationXmlElement = rootElement->FirstChildElement( "Rotation" );    // Grid represents the reconstruction geometry
+    if( rotationXmlElement == nullptr )
+    {
+        std::cout << R"(XML Error: no "Rotation" element)" << std::endl;
+        return;
+    }
+    auto rotationCenterXmlElement = rotationXmlElement->FirstChildElement( "center" );
+    if( rotationXmlElement == nullptr )
+    {
+        std::cout << R"(XML Error: no "Rotation/center" element)" << std::endl;
+        return;
+    }
+
+    auto rotationCenterString = std::string( rotationCenterXmlElement->GetText() );
+    auto rotationCenterOptional = Position3D::FromString( rotationCenterString );
+    if( !rotationCenterOptional.has_value() )
+    {
+        std::cout << R"(XML Error: "Rotation/center" element could not be parsed)" << std::endl;
+        return;
+    }
+    m_fulcrum = rotationCenterOptional.value();
+
+
     /***************************
     Reconstruction volume
     */
-    auto gridXmlElement = geometryElem.firstChildElement( "Grid" );    // Grid represents the reconstruction geometry
-    if( gridXmlElement.isNull() )
+    std::cout << "Reconstruction volume parsing" << std::endl;
+    auto * gridXmlElement = rootElement->FirstChildElement( "Grid" );    // Grid represents the reconstruction geometry
+    if( gridXmlElement == nullptr )
     {
+        std::cout << R"(XML Error: no "Grid" element)" << std::endl;
         return;
     }
 
-    auto centerXmlElement = gridXmlElement.firstChildElement( "center" );
-    if( centerXmlElement.isNull() )
+    auto centerXmlElement = gridXmlElement->FirstChildElement( "center" );
+    if( centerXmlElement == nullptr )
     {
-        return;
-    }
-    bool successfullParse;
-    auto volumeCenterPosition = QStringToPosition3D( centerXmlElement.firstChild().nodeValue(), successfullParse );
-    if( !successfullParse )
-    {
+        std::cout << R"(XML Error: no "Grid/center" element)" << std::endl;
         return;
     }
 
-    auto scaleXmlElement = gridXmlElement.firstChildElement( "scale" );
-    if( scaleXmlElement.isNull() )
+    auto centerString = std::string( centerXmlElement->GetText() );
+    auto centerOptional = Position3D::FromString( centerString );
+    if( !centerOptional.has_value() )
     {
+        std::cout << R"(XML Error: "Grid/center" element could not be parsed)" << std::endl;
         return;
     }
-    auto reconstructionVoxelSpacing = QStringToPosition3D( scaleXmlElement.firstChild().nodeValue(), successfullParse );
-    if( !successfullParse )
+    auto center = centerOptional.value();
+
+    auto voxelSpacingXmlElement = gridXmlElement->FirstChildElement( "scale" );
+    if( voxelSpacingXmlElement == nullptr )
     {
-        return;
-    }
-    // z an x are inverted
-    VoxelSpacing reOrderedVoxelSpacing( reconstructionVoxelSpacing.z, reconstructionVoxelSpacing.y, reconstructionVoxelSpacing.x );
-
-
-    auto resolutionXmlElement = gridXmlElement.firstChildElement( "resolution" );
-    if( resolutionXmlElement.isNull() )
-    {
-        return;
-    }
-    auto reconstructionVolumeSize = QStringToSize3D( resolutionXmlElement.firstChild().nodeValue(), successfullParse );
-    if( !successfullParse )
-    {
-        return;
-    }
-    Size3D reorderedVolumeSize( reconstructionVolumeSize.z, reconstructionVolumeSize.y, reconstructionVolumeSize.x );
-
-    auto volumeWSize = ComputeWSize3D( reorderedVolumeSize, reOrderedVoxelSpacing );
-
-    Position3D volumeLeftBottomFrontPosition;
-    volumeLeftBottomFrontPosition.x = -volumeWSize.x / 2.;
-    volumeLeftBottomFrontPosition.y = -volumeWSize.y / 2.;
-    volumeLeftBottomFrontPosition.z = -volumeWSize.z / 2.;
-
-    m_volume = std::make_unique<TomoVolume>( volumeLeftBottomFrontPosition, reorderedVolumeSize, reOrderedVoxelSpacing );
-
-
-    /***************************
-    Fulcrum position
-    */
-    auto rotationXmlElement = geometryElem.firstChildElement( "Rotation" );
-    if( rotationXmlElement.isNull() )
-    {
+        std::cout << R"(XML Error: no "Grid/scale" element)" << std::endl;
         return;
     }
 
-    auto rotationCenterXmlElement = rotationXmlElement.firstChildElement( "center" );
-    if( rotationCenterXmlElement.isNull() )
+    auto voxelSpacingString = std::string( voxelSpacingXmlElement->GetText() );
+    auto voxelSpacingOptional = Position3D::FromString( voxelSpacingString );
+    if( !voxelSpacingOptional.has_value() )
     {
+        std::cout << R"(XML Error: "Grid/scale" element could not be parsed)" << std::endl;
+        return;
+    }
+    auto voxelSpacing = voxelSpacingOptional.value();
+
+    VoxelSpacing voxelSpacingReordered( voxelSpacing.z, voxelSpacing.y, voxelSpacing.x );
+
+    auto resolutionXmlElement = gridXmlElement->FirstChildElement( "resolution" );
+    if( resolutionXmlElement == nullptr )
+    {
+        std::cout << R"(XML Error: no "Grid/resolution" element)" << std::endl;
         return;
     }
 
-
-    auto positionString = rotationCenterXmlElement.firstChild().nodeValue();
-    auto rotationCenter = QStringToPosition3D( positionString, successfullParse ) - volumeCenterPosition;
-    if( !successfullParse )
+    auto resolutionString = std::string( resolutionXmlElement->GetText() );
+    auto resolutionOptional = Position3D::FromString( resolutionString );
+    if( !resolutionOptional.has_value() )
     {
+        std::cout << R"(XML Error: "Grid/resolution" element could not be parsed)" << std::endl;
         return;
     }
+    auto resolution = resolutionOptional.value();
 
+    Size3D resolutionReordered( resolution.z, resolution.y, resolution.x );
+
+    WSize3D volumeSize( voxelSpacingReordered, resolutionReordered );
+
+    Position3D volumeLeftBottomFrontPosition( -0.5 * volumeSize.x, -0.5 * volumeSize.y, -0.5 * volumeSize.z );
+
+    m_volume = std::make_unique<TomoVolume>( volumeLeftBottomFrontPosition, resolutionReordered, voxelSpacingReordered );
 
     /***************************
     XRay sources positions
     */
-    auto xRayXmlElement = geometryElem.firstChildElement( "XRay" );
-    if( xRayXmlElement.isNull() )
+    std::cout << "XRay sources positions parsing" << std::endl;
+    auto xRayXmlElement = rootElement->FirstChildElement( "XRay" );
+    if( xRayXmlElement == nullptr )
     {
+        std::cout << R"(XML Error: no "XRay" element)" << std::endl;
         return;
     }
-    auto sourcesXmlElement = xRayXmlElement.firstChildElement( "sources" );
-    if( sourcesXmlElement.isNull() )
+
+    auto sourcesXmlElement = xRayXmlElement->FirstChildElement( "sources" );
+    if( sourcesXmlElement == nullptr )
     {
+        std::cout << R"(XML Error: no "XRay/sources" element)" << std::endl;
         return;
     }
     // Get the first child of the component
-    auto childSource = sourcesXmlElement.firstChild().toElement();
+    auto childSource = sourcesXmlElement->FirstChild();
     std::vector<Position3D> sourcePositions;
     // Read each child of the sources node
-    while( !childSource.isNull() )
+    while( childSource != nullptr )
     {
-        auto sourcePositionString = childSource.firstChild().nodeValue();
-        auto sourcePositionInWorld = QStringToPosition3D( sourcePositionString, successfullParse ) - volumeCenterPosition;
-        if( !successfullParse )
+        auto childSourceElement = childSource->ToElement();
+        auto sourcePositionString = std::string( childSourceElement->GetText() );
+        auto sourcePositionOptional = Position3D::FromString( sourcePositionString );
+        if( !sourcePositionOptional.has_value() )
         {
+            std::cout << R"(XML Error: one among "XRay/sources" element could not be parsed)" << std::endl;
             return;
         }
-        sourcePositions.push_back( sourcePositionInWorld );
+        Position3D translatedSourcePosition( sourcePositionOptional.value().x - center.x, sourcePositionOptional.value().y - center.y, sourcePositionOptional.value().z - center.z );
+        sourcePositions.push_back( translatedSourcePosition );
+
         // Next child
-        childSource = childSource.nextSibling().toElement();
+        childSource = childSourceElement->NextSibling();
     }
     if( sourcePositions.empty() )
     {
+        std::cout << R"(XML Error: "XRay/sources" elements not parsed properly: is empty)" << std::endl;
         return;
     }
+
 
     /***************************
     Detectors positions and sizes
     */
-    auto cameraXmlElement = geometryElem.firstChildElement( "Camera" );
-    if( cameraXmlElement.isNull() )
+    std::cout << "Detectors positions and sizes parsing" << std::endl;
+    auto cameraXmlElement = rootElement->FirstChildElement( "Camera" );
+    if( cameraXmlElement == nullptr )
     {
-        return;
-    }
-    auto totalWidthXmlElement = cameraXmlElement.firstChildElement( "totalWidth" );
-    if( totalWidthXmlElement.isNull() )
-    {
-        return;
-    }
-    auto conversionOK{ true };
-    auto cameraWidth = totalWidthXmlElement.firstChild().nodeValue().toFloat( &conversionOK );
-    if( !conversionOK || AlmostEqualRelative( cameraWidth, 0.F ) )
-    {
+        std::cout << R"(XML Error: no "Camera" element)" << std::endl;
         return;
     }
 
-    auto totalHeightXmlElement = cameraXmlElement.firstChildElement( "totalHeight" );
-    if( totalHeightXmlElement.isNull() )
+    auto totalWidthXmlElement = cameraXmlElement->FirstChildElement( "totalWidth" );
+    if( totalWidthXmlElement == nullptr )
     {
-        return;
-    }
-    auto cameraHeight = totalHeightXmlElement.firstChild().nodeValue().toFloat( &conversionOK );
-    if( !conversionOK || AlmostEqualRelative( cameraHeight, 0.f ) )
-    {
+        std::cout << R"(XML Error: no "Camera/totalWidth" element)" << std::endl;
         return;
     }
 
+    auto totalWidthString = std::string( totalWidthXmlElement->GetText() );
+    float cameraWidth;
+    try
+    {
+        cameraWidth = static_cast<float>( std::stod( totalWidthString ) );
+    }
+    catch( const std::invalid_argument & e )
+    {
+        std::cout << R"(XML Error: "Camera/totalWidth" element parsing problem: invalid argument )" << totalWidthString << std::endl;
+        return;
+    }
+    catch( const std::out_of_range & e )
+    {
+        std::cout << R"(XML Error: "Camera/totalWidth" element parsing problem: out of range value )" << totalWidthString << std::endl;
+        return;
+    }
+
+    if( AlmostEqualRelative( cameraWidth, 0.F ) )
+    {
+        std::cout << R"(XML Error: "Camera/totalWidth" element value problem: should not be zero )" << totalWidthString << std::endl;
+        return;
+    }
+
+    auto totalHeightXmlElement = cameraXmlElement->FirstChildElement( "totalHeight" );
+    if( totalHeightXmlElement == nullptr )
+    {
+        std::cout << R"(XML Error: no "Camera/totalHeight" element)" << std::endl;
+        return;
+    }
+
+    auto totalHeightString = std::string( totalHeightXmlElement->GetText() );
+    float cameraHeight;
+    try
+    {
+        cameraHeight = static_cast<float>( std::stod( totalHeightString ) );
+    }
+    catch( const std::invalid_argument & e )
+    {
+        std::cout << R"(XML Error: "Camera/totalHeight" element parsing problem: invalid argument )" << totalHeightString << std::endl;
+        return;
+    }
+    catch( const std::out_of_range & e )
+    {
+        std::cout << R"(XML Error: "Camera/totalHeight" element parsing problem: out of range value )" << totalHeightString << std::endl;
+        return;
+    }
+
+    if( AlmostEqualRelative( cameraHeight, 0.F ) )
+    {
+        std::cout << R"(XML Error: "Camera/totalHeight" element value problem: should not be zero )" << totalHeightString << std::endl;
+        return;
+    }
     WSize2D detectorsWSize( cameraWidth, cameraHeight );
 
-    auto pixelWidthXmlElement = cameraXmlElement.firstChildElement( "pixelWidth" );
-    if( pixelWidthXmlElement.isNull() )
+    auto pixelWidthXmlElement = cameraXmlElement->FirstChildElement( "pixelWidth" );
+    if( pixelWidthXmlElement == nullptr )
     {
+        std::cout << R"(XML Error: no "Camera/pixelWidth" element)" << std::endl;
         return;
     }
-    auto pixelWidth = pixelWidthXmlElement.firstChild().nodeValue().toInt( &conversionOK );
-    if( !conversionOK || pixelWidth == 0 )
-    {
-        return;
-    }
-    auto pixelHeightXmlElement = cameraXmlElement.firstChildElement( "pixelHeight" );
-    if( pixelHeightXmlElement.isNull() )
-    {
-        return;
-    }
-    auto pixelHeight = pixelHeightXmlElement.firstChild().nodeValue().toInt( &conversionOK );
-    if( !conversionOK || pixelHeight == 0 )
-    {
-        return;
-    }
-    Size2D detectorsSize( pixelWidth, pixelHeight );
 
-    auto referencesXmlElement = cameraXmlElement.firstChildElement( "references" );
-    if( referencesXmlElement.isNull() )
+    auto pixelWidthString = std::string( pixelWidthXmlElement->GetText() );
+    float pixelWidth;
+    try
     {
+        pixelWidth = static_cast<float>( std::stod( pixelWidthString ) );
+    }
+    catch( const std::invalid_argument & e )
+    {
+        std::cout << R"(XML Error: "Camera/pixelWidth" element parsing problem: invalid argument )" << pixelWidthString << std::endl;
+        return;
+    }
+    catch( const std::out_of_range & e )
+    {
+        std::cout << R"(XML Error: "Camera/pixelWidth" element parsing problem: out of range value )" << pixelWidthString << std::endl;
+        return;
+    }
+
+    if( pixelWidth == 0 )
+    {
+        std::cout << R"(XML Error: "Camera/pixelWidth" element value problem: should not be zero )" << pixelWidthString << std::endl;
+        return;
+    }
+
+    auto pixelHeightXmlElement = cameraXmlElement->FirstChildElement( "pixelHeight" );
+    if( pixelHeightXmlElement == nullptr )
+    {
+        std::cout << R"(XML Error: no "Camera/pixelHeight" element)" << std::endl;
+        return;
+    }
+
+    auto pixelHeightString = std::string( pixelHeightXmlElement->GetText() );
+    float pixelHeight;
+    try
+    {
+        pixelHeight = static_cast<float>( std::stod( pixelHeightString ) );
+    }
+    catch( const std::invalid_argument & e )
+    {
+        std::cout << R"(XML Error: "Camera/pixelHeight" element parsing problem: invalid argument )" << pixelHeightString << std::endl;
+        return;
+    }
+    catch( const std::out_of_range & e )
+    {
+        std::cout << R"(XML Error: "Camera/pixelHeight" element parsing problem: out of range value )" << pixelHeightString << std::endl;
+        return;
+    }
+
+    if( pixelHeight == 0 )
+    {
+        std::cout << R"(XML Error: "Camera/pixelHeight" element value problem: should not be zero )" << pixelHeightString << std::endl;
+        return;
+    }
+
+    Size2D detectorsSize( pixelWidth, pixelHeight );
+    auto referencesXmlElement = cameraXmlElement->FirstChildElement( "references" );
+    if( referencesXmlElement == nullptr )
+    {
+        std::cout << R"(XML Error: no "Camera/references" element)" << std::endl;
         return;
     }
     // Get the first child of the component
-    auto childReference = referencesXmlElement.firstChild().toElement();
+    auto detectorsPositionsChildReference = referencesXmlElement->FirstChild();
     std::vector<float> zDetectorPositions;
     std::vector<Position2D> detectorsBottomLeftPositions;
     // Read each child of the sources node
-    while( !childReference.isNull() )
+    while( detectorsPositionsChildReference != nullptr )
     {
-        auto detectorPositionString = childReference.firstChild().nodeValue();
-        auto detectorPositionInWorld = QStringToPosition3D( detectorPositionString, successfullParse ) - volumeCenterPosition;
-        if( !successfullParse )
+        auto detectorsPositionsChildReferenceElement = detectorsPositionsChildReference->ToElement();
+        auto detectorPositionString = std::string( detectorsPositionsChildReferenceElement->GetText() );
+        auto detectorPositionOptional = Position3D::FromString( detectorPositionString );
+
+        if( !detectorPositionOptional.has_value() )
         {
+            std::cout << R"(XML Error: one among "Camera/references" element could not be parsed)" << std::endl;
             return;
         }
+
+        auto detectorPositionInWorld = Position3D( detectorPositionOptional.value().x - center.x, detectorPositionOptional.value().y - center.y, detectorPositionOptional.value().z - center.z );
+
         detectorsBottomLeftPositions.push_back( Position2D( detectorPositionInWorld.x, detectorPositionInWorld.y ) );
         zDetectorPositions.push_back( detectorPositionInWorld.z );
 
         // Next child
-        childReference = childReference.nextSibling().toElement();
+        detectorsPositionsChildReference = detectorsPositionsChildReference->NextSibling();
     }
     if( detectorsBottomLeftPositions.empty() )
     {
+        std::cout << R"(XML Error: detectors positions empty)" << std::endl;
         return;
     }
 
     m_projections = std::make_unique<TomoProjectionsSet>( detectorsBottomLeftPositions, detectorsWSize, detectorsSize );
     auto detectorsZCommonPosition = static_cast<float>( std::accumulate( zDetectorPositions.begin(), zDetectorPositions.end(), .0 ) ) / static_cast<float>( zDetectorPositions.size() );
 
-    m_table = std::make_unique<TomoTable>( rotationCenter, sourcePositions, detectorsZCommonPosition );
-
+    m_table = std::make_unique<TomoTable>( sourcePositions, detectorsZCommonPosition );
 
     /***************************
-    Projections ROIs
+    Rois positions
     */
-    auto radiosXmlElement = geometryElem.firstChildElement( "Radios" );
-    if( radiosXmlElement.isNull() )
+    std::cout << R"(Roi parsing)" << std::endl;
+    auto radiosXmlElement = rootElement->FirstChildElement( "Radios" );
+    if( radiosXmlElement == nullptr )
     {
+        std::cout << R"(XML Error: no "Radios" element)" << std::endl;
         return;
     }
 
-    auto roisXmlElement = radiosXmlElement.firstChildElement( "rois" );
-    if( roisXmlElement.isNull() )
+    auto roisXmlElement = radiosXmlElement->FirstChildElement( "rois" );
+    if( roisXmlElement == nullptr )
     {
+        std::cout << R"(XML Error: no "Radios/rois" element)" << std::endl;
         return;
     }
+
     // Get the first child of the component
-    auto childRois = roisXmlElement.firstChild().toElement();
-
-    auto roiIndex{ 0 };
-    QRect uniqueRoi;
+    auto roisChildReference = roisXmlElement->FirstChild();
+    Pixel bottomLeftRoi( 0, 0 );
+    Pixel topRightRoi( 0, 0 );
+    int roiIndex = 0;
     // Read each child of the sources node
-    while( !childRois.isNull() )
+    while( roisChildReference != nullptr )
     {
-        auto roiString = childRois.firstChild().nodeValue();
-        auto roiRect = QStringToQRect( roiString, successfullParse );
-        if( !successfullParse )
+        auto roisChildReferenceElement = roisChildReference->ToElement();
+        auto roiString = std::string( roisChildReferenceElement->GetText() );
+        auto roiCoordinates = glob::SentenceToWords( roiString );
+        std::array<std::string, glob::TWO> bottomLeftCoordinatesString{ roiCoordinates[0], roiCoordinates[1] };
+        std::array<std::string, glob::TWO> topRightCoordinatesString{ roiCoordinates[4], roiCoordinates[5] };
+        auto currentRoiBottomLeftOptional = Pixel::FromStringArray( std::array<std::string, glob::TWO>{ roiCoordinates[0], roiCoordinates[1] } );
+        if( !currentRoiBottomLeftOptional.has_value() )
         {
+            std::cout << R"(XML Error: roi bottom left position parsing error)" << std::endl;
+            return;
+        }
+        auto currentRoiTopRightOptional = Pixel::FromStringArray( std::array<std::string, glob::TWO>{ roiCoordinates[4], roiCoordinates[5] } );
+        if( !currentRoiTopRightOptional.has_value() )
+        {
+            std::cout << R"(XML Error: roi top right position parsing error)" << std::endl;
             return;
         }
         if( roiIndex == 0 )
         {
-            uniqueRoi = roiRect;
+            bottomLeftRoi = currentRoiBottomLeftOptional.value();
+            topRightRoi = currentRoiTopRightOptional.value();
         }
         else
         {
-            if( roiRect != uniqueRoi )
+            if( bottomLeftRoi != currentRoiBottomLeftOptional.value() )
             {
-                qWarning() << " some Rois of projections are different";
+                std::cout << R"(XML Error: different roi bottom left positions )" << std::endl;
+                return;
+            }
+            if( topRightRoi != currentRoiTopRightOptional.value() )
+            {
+                std::cout << R"(XML Error: different roi top right positions )" << std::endl;
+                return;
             }
         }
         // Next child
+        roisChildReference = roisChildReference->NextSibling();
         roiIndex++;
-        childRois = childRois.nextSibling().toElement();
     }
-    m_projectionROIsBLPixelPositionOnDetector = Pixel( uniqueRoi.x(), uniqueRoi.y() );
 
-    std::vector<Position2D> projectionsRoisBottomLeftPositions( m_projections->GetNProjections() );
+    bottomLeftRoi.x = std::clamp( bottomLeftRoi.x, 0, detectorsSize.x - 1 );
+    bottomLeftRoi.y = std::clamp( bottomLeftRoi.y, 0, detectorsSize.y - 1 );
+    topRightRoi.x = std::clamp( topRightRoi.x, 0, detectorsSize.x - 1 );
+    topRightRoi.y = std::clamp( topRightRoi.y, 0, detectorsSize.y - 1 );
+
+    // bottomLeftRoi.x = 50;
+    // bottomLeftRoi.y = 50;
+    // topRightRoi.x = 3000;
+    // topRightRoi.y = 3000;
+
+    m_projectionROIsBLPixelPositionOnDetector = Pixel( bottomLeftRoi.x, bottomLeftRoi.y );
+
+    std::vector<Position2D> projectionsRoisBottomLeftPositions;
     for( auto projectionIndex = 0; projectionIndex < m_projections->GetNProjections(); projectionIndex++ )
     {
-        projectionsRoisBottomLeftPositions[projectionIndex] = m_projections->GetPosition( projectionIndex, m_projectionROIsBLPixelPositionOnDetector );
+        projectionsRoisBottomLeftPositions.push_back( m_projections->GetPosition( projectionIndex, m_projectionROIsBLPixelPositionOnDetector ) );
     }
 
-    m_projectionsRois = std::make_unique<TomoProjectionsSet>( projectionsRoisBottomLeftPositions, Size2D( uniqueRoi.width(), uniqueRoi.height() ), m_projections->GetPixelSpacing() );
+    m_projectionsRois = std::make_unique<TomoProjectionsSet>( projectionsRoisBottomLeftPositions, Size2D( topRightRoi.x - bottomLeftRoi.x + 1, topRightRoi.y - bottomLeftRoi.y + 1 ), m_projections->GetPixelSpacing() );
 
     m_isValid = true;
-}
-
-
-Position3D TomoGeometry::QStringToPosition3D( const QString & p_positionString, bool & p_done ) const
-{
-    Position3D position;
-    auto splittedString = p_positionString.split( " " );
-    if( splittedString.size() != 3 )
-    {
-        p_done = false;
-        return Position3D{};
-    }
-
-    auto conversionOK{ true };
-    position.x = splittedString[0].toFloat( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return Position3D{};
-    }
-    position.y = splittedString[1].toFloat( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return Position3D{};
-    }
-    position.z = splittedString[2].toFloat( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return Position3D{};
-    }
-
-    p_done = true;
-    return position;
-}
-Size3D TomoGeometry::QStringToSize3D( const QString & p_positionString, bool & p_done ) const
-{
-    Size3D volumeSize;
-    auto splittedString = p_positionString.split( " " );
-    if( splittedString.size() != 3 )
-    {
-        p_done = false;
-        return Size3D{};
-    }
-
-    auto conversionOK{ true };
-    volumeSize.x = splittedString[0].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return Size3D{};
-    }
-    volumeSize.y = splittedString[1].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return Size3D{};
-    }
-    volumeSize.z = splittedString[2].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return Size3D{};
-    }
-    p_done = true;
-    return volumeSize;
-}
-
-QRect TomoGeometry::QStringToQRect( const QString & p_positionString, bool & p_done ) const
-{
-    auto splittedString = p_positionString.split( " " );
-    if( splittedString.size() != 8 )
-    {
-        p_done = false;
-        return QRect{};
-    }
-
-    auto conversionOK{ true };
-    QPoint topLeft;
-    QPoint bottomRight;
-    auto xPosition = splittedString[0].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    topLeft.setX( xPosition );
-    bottomRight.setX( xPosition );
-    auto yPosition = splittedString[1].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    topLeft.setY( yPosition );
-    bottomRight.setY( yPosition );
-    xPosition = splittedString[2].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    if( xPosition < topLeft.x() )
-    {
-        topLeft.setX( xPosition );
-    }
-    if( xPosition > bottomRight.x() )
-    {
-        bottomRight.setX( xPosition );
-    }
-    yPosition = splittedString[3].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    if( yPosition < topLeft.y() )
-    {
-        topLeft.setY( yPosition );
-    }
-    if( yPosition > bottomRight.y() )
-    {
-        bottomRight.setY( yPosition );
-    }
-    xPosition = splittedString[4].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    if( xPosition < topLeft.x() )
-    {
-        topLeft.setX( xPosition );
-    }
-    if( xPosition > bottomRight.x() )
-    {
-        bottomRight.setX( xPosition );
-    }
-    yPosition = splittedString[5].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    if( yPosition < topLeft.y() )
-    {
-        topLeft.setY( yPosition );
-    }
-    if( yPosition > bottomRight.y() )
-    {
-        bottomRight.setY( yPosition );
-    }
-    xPosition = splittedString[6].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    if( xPosition < topLeft.x() )
-    {
-        topLeft.setX( xPosition );
-    }
-    if( xPosition > bottomRight.x() )
-    {
-        bottomRight.setX( xPosition );
-    }
-    yPosition = splittedString[7].toInt( &conversionOK );
-    if( !conversionOK )
-    {
-        p_done = false;
-        return QRect{};
-    }
-    if( yPosition < topLeft.y() )
-    {
-        topLeft.setY( yPosition );
-    }
-    if( yPosition > bottomRight.y() )
-    {
-        bottomRight.setY( yPosition );
-    }
-    return QRect{ topLeft, bottomRight };
 }
 
 // getters for volume
@@ -491,11 +451,11 @@ WSize3D TomoGeometry::volumeWSize3D() const
 }
 Position3D TomoGeometry::volumeBLF() const
 {
-    return m_volume->GetBLF();
+    return m_volume->GetBottomLeftFront();
 }
 Position3D TomoGeometry::volumeTRB() const
 {
-    return m_volume->GetTRB();
+    return m_volume->GetTopRightBack();
 }
 float TomoGeometry::volumeSize() const
 {
@@ -520,13 +480,6 @@ std::vector<int> TomoGeometry::volumeVoxelsIndices() const
 std::vector<Position3D> TomoGeometry::volumeGridPositions() const
 {
     return m_volume->GetGridPositions();
-}
-
-
-// getters for table
-Position3D TomoGeometry::rotationCenter() const
-{
-    return m_table->GetRotationCenter();
 }
 
 std::vector<float> TomoGeometry::sourcesYPositions() const
@@ -593,7 +546,6 @@ std::vector<PixelOnProjection> TomoGeometry::projectionIndiceAndPixels() const
 {
     return m_projections->GetProjectionIndiceAndPixels();
 }
-
 
 int TomoGeometry::nbProjectionsRois() const
 {

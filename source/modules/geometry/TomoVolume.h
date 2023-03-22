@@ -1,9 +1,14 @@
 #pragma once
 
-#include "commons/GeometryUtils.h"
+#include "modules/geometry/Position3D.h"
+#include "modules/geometry/WSize3D.h"
+#include "modules/geometry/Size3D.h"
+#include "modules/geometry/VoxelSpacing.h"
+#include "modules/geometry/Pave.h"
 
 #include <optional>
 #include <vector>
+#include <ostream>
 
 enum class Side : int
 {
@@ -28,6 +33,7 @@ public:
     TomoVolume( const Pave & p_pave, const Size3D & p_size );
     TomoVolume( const Pave & p_pave, const VoxelSpacing & p_voxelSpacing );
 
+    friend std::ostream &operator<<(std::ostream &p_outputStream, TomoVolume const & p_data);
 
     void SetVoxelSpacingAndUpdateWSize( const VoxelSpacing & p_voxelSpacing );
     void SetVoxelSpacingAndUpdateSize( const VoxelSpacing & p_voxelSpacing );
@@ -36,7 +42,6 @@ public:
     void SetWSizeAndUpdateVoxelSpacing( const WSize3D & p_wsize );
     void SetWSizeAndUpdateSize( const WSize3D & p_wsize );
 
-    std::vector<Position3D> FindIntersectionPointsWithLine( const Position3D & p_origin, const Vector3D & p_rayVector ) const;
     TomoVolume & operator=( const TomoVolume & p_originalTomoVolume );
 
     bool Contains( const Position3D & p_point ) const;
@@ -46,8 +51,8 @@ public:
 
     Size3D GetSize3D() const;
     WSize3D GetWSize3D() const;
-    Position3D GetBLF() const;
-    Position3D GetTRB() const;
+    Position3D GetBottomLeftFront() const;
+    Position3D GetTopRightBack() const;
     VoxelSpacing GetVoxelSpacing() const;
 
     // for computation optimizations
@@ -68,8 +73,8 @@ private:
 
 
     Pave m_pave;
-    Size3D m_size;
-    VoxelSpacing m_voxelSpacing;
+    Size3D m_size{0,0,0};
+    VoxelSpacing m_voxelSpacing{0.F,0.F,0.F};
 
     // for computation optimizations
     std::vector<float> m_xPositions; 
@@ -79,3 +84,10 @@ private:
     std::vector<Position3D> m_gridPositions;
     std::vector<int> m_voxelsIndices;
 };
+
+
+inline std::ostream &operator<<(std::ostream &p_outputStream, TomoVolume const & p_data) { 
+    return p_outputStream   << "pave: " << p_data.m_pave << std::endl
+                            << "size: " << p_data.m_size << std::endl
+                            << "voselspacing: " << p_data.m_voxelSpacing << std::endl;
+}

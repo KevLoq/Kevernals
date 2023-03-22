@@ -1,9 +1,8 @@
 #include "modules/geometry/TomoTable.h"
 
 
-TomoTable::TomoTable( const Position3D & p_rotationCenter, const std::vector<Position3D> & p_sourcesPositions, const float & p_detectorsZCommonPosition )
-  : m_rotationCenter( p_rotationCenter )
-  , m_detectorsZCommonPosition( p_detectorsZCommonPosition )
+TomoTable::TomoTable( const std::vector<Position3D> & p_sourcesPositions, const float & p_detectorsZCommonPosition )
+  : m_detectorsZCommonPosition( p_detectorsZCommonPosition )
 {
     auto sourcesSize = p_sourcesPositions.size();
     m_sourcesYPositions.resize( sourcesSize );
@@ -17,12 +16,6 @@ TomoTable::TomoTable( const Position3D & p_rotationCenter, const std::vector<Pos
     }
     m_sourcesXCommonPosition /= static_cast<float>( sourcesSize );
     m_sourcesZCommonPosition /= static_cast<float>( sourcesSize );
-}
-
-
-Position3D TomoTable::GetRotationCenter() const
-{
-    return m_rotationCenter;
 }
 
 // sources geometric features
