@@ -36,24 +36,42 @@ int main( int argc, char * argv[] )
     // std::string geometryXmlFileName{ "tomos_2018-02-02T10-21-57.xml" };
 
     // geometric phantom
-    // std::string tomoDataDirName = "2018-09-05T14-29-03";
-    // std::string rawProjectionDicomFileName = "RF.2.16.840.1.113669.632.3.400305504133405787740011255270231557684.dcm";
-    // std::string geometryXmlFileName = "tomos_2018-09-05T14-29-03.xml";
+    /*std::string tomoDataDirName = "2018-09-05T14-29-03";
+    std::string rawProjectionDicomFileName = "RF.2.16.840.1.113669.632.3.400305504133405787740011255270231557684.dcm";
+    std::string geometryXmlFileName = "tomos_2018-09-05T14-29-03.xml";
+    std::vector<int> imageIndicesToRemove;*/
+
 
     // flo phantom
     // std::string tomoDataDirName = "tomos_florian";
     // std::string rawProjectionDicomFileName = "dcm_data_files";
     // std::string geometryXmlFileName = "tomos_2022-06-13T16-14-05.xml";
 
-    std::string tomoDataDirName = "PV2_032023";
+    // trial PV2 03032023
+    // std::string tomoDataDirName = "PV2_03032023";
+    // std::string rawProjectionDicomFileName = "dcm_data_files";
+    // std::string geometryXmlFileName = "tomos_2023-03-03T16-38-54.xml";
+
+    // trial PV2 17032023
+    /*std::string tomoDataDirName = "PV2_17032023";
     std::string rawProjectionDicomFileName = "dcm_data_files";
-    std::string geometryXmlFileName = "tomos_2023-03-03T16-38-54.xml";
+    std::string geometryXmlFileName = "tomos_2023-03-17T09-04-17.xml";*/
+    // std::vector<int> xmlDataIndicesToRemove = { 0, 1, 25, 26 };
+    // std::vector<int> imageIndicesToRemove = { 23, 24, 25 };
+    //
+    // trial PV2 31032023
+    std::string tomoDataDirName = "PV2_31032023_001";
+    std::string rawProjectionDicomFileName = "dcm_data_files";
+    std::string geometryXmlFileName = "tomos_2023-03-31T12-15-50.xml";
+    std::vector<int> xmlDataIndicesToRemove = { 0, 37, 38, 39, 40 };
+    std::vector<int> imageIndicesToRemove{ 36, 37, 38, 39 };
 
     const std::string dataDirPath = "C:/Users/loquin.k/OneDrive - DMS/ADAM/Tomosynthesis/data/" + tomoDataDirName + "/";
     const std::string resultDirPath = dataDirPath + "results/";
 
     const std::string geometryXmlFilePath = dataDirPath + geometryXmlFileName;
     auto tomoGeometry = std::make_unique<TomoGeometry>( geometryXmlFilePath );
+    tomoGeometry->PerformCheatingAdaptationsForDemonstration( xmlDataIndicesToRemove );
 
     if( !tomoGeometry->IsValid() )
     {
@@ -70,7 +88,7 @@ int main( int argc, char * argv[] )
 
     const std::string dataFilePath = dataDirPath + rawProjectionDicomFileName;
     DICOMReader dcmReader( tomoGeometry.get() );
-    auto dataImageFileResult = dcmReader.ReadDirectory( dataFilePath );
+    auto dataImageFileResult = dcmReader.ReadDirectory( dataFilePath, imageIndicesToRemove );
     if( dataImageFileResult.has_error() )
     {
         std::cout << "dataImageFileResult has error" << std::endl;
@@ -128,7 +146,7 @@ int main( int argc, char * argv[] )
         tiffWriterBackProj->SetFileName( ( resultDirPath + "backProjectionreconstructedImage.tiff" ).c_str() );
         tiffWriterBackProj->SetInputData( resultingVolume );
         tiffWriterBackProj->Write();
-        std::cout << "reconstruction performed" << std::endl;
+        std::cout << "backprojection reconstruction performed" << std::endl;
         std::cout << " ---  DONE  ---  ;)" << std::endl;
     }
     if( false )
@@ -146,10 +164,10 @@ int main( int argc, char * argv[] )
         tiffWriterBackProj->SetFileName( ( resultDirPath + "shiftAndAddReconstructedImage.tiff" ).c_str() );
         tiffWriterBackProj->SetInputData( resultingVolume );
         tiffWriterBackProj->Write();
-        std::cout << "reconstruction performed" << std::endl;
+        std::cout << "Shift and Add reconstruction performed" << std::endl;
         std::cout << " ---  DONE  ---  ;)" << std::endl;
     }
-    if( false )
+    if( true )
     {
         auto premierBPResult = recons::BackProjection( tomoGeometry.get(), projectionsImage );
         if( premierBPResult.has_error() )
@@ -171,10 +189,10 @@ int main( int argc, char * argv[] )
         tiffWriterBackProj->SetFileName( ( resultDirPath + "ARTReconstructedImage.tiff" ).c_str() );
         tiffWriterBackProj->SetInputData( resultingVolume );
         tiffWriterBackProj->Write();
-        std::cout << "reconstruction performed" << std::endl;
+        std::cout << "ART reconstruction performed" << std::endl;
         std::cout << " ---  DONE  ---  ;)" << std::endl;
     }
-    if( true )
+    if( false )
     {
         auto premierBPResult = recons::BackProjection( tomoGeometry.get(), projectionsImage );
         if( premierBPResult.has_error() )
@@ -196,7 +214,7 @@ int main( int argc, char * argv[] )
         tiffWriterBackProj->SetFileName( ( resultDirPath + "MLEMReconstructedImage.tiff" ).c_str() );
         tiffWriterBackProj->SetInputData( resultingVolume );
         tiffWriterBackProj->Write();
-        std::cout << "reconstruction performed" << std::endl;
+        std::cout << "MLEM reconstruction performed" << std::endl;
         std::cout << " ---  DONE  ---  ;)" << std::endl;
     }
 

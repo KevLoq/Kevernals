@@ -50,7 +50,7 @@ public:
 
     // mainly used for parallelization
     std::vector<int> projectionsPositionsIndices() const;
-    std::vector<PixelOnProjection> projectionIndiceAndPixels() const;
+    // std::vector<PixelOnProjection> projectionIndiceAndPixels() const;
 
     int nbProjectionsRois() const;
     std::vector<Position2D> projectionsRoisBottomLeftPositions() const;
@@ -63,7 +63,7 @@ public:
 
     // mainly used for parallelization
     std::vector<int> projectionsRoisPositionsIndices() const;
-    std::vector<PixelOnProjection> projectionRoisIndiceAndPixels() const;
+    // std::vector<PixelOnProjection> projectionRoisIndiceAndPixels() const;
 
     // volume geometric features
     Size3D volumeSize3D() const;
@@ -89,6 +89,8 @@ public:
     TomoTable * GetTable() const { return m_table.get(); }
 
     Pixel GetProjectionROIsBLPixelPositionOnDetector() const { return m_projectionROIsBLPixelPositionOnDetector; }
+
+    void PerformCheatingAdaptationsForDemonstration( std::vector<int> const & p_dataIndicesToRemove ) const;
 
 private:
     std::string m_filePath;    // OK

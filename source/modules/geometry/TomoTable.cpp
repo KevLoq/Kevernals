@@ -36,3 +36,20 @@ float TomoTable::GetDetectorsZCommonPosition() const
 {
     return m_detectorsZCommonPosition;
 }
+
+void TomoTable::RemoveSource( std::vector<int> const & p_dataIndicesToRemove )
+{
+    auto indices = p_dataIndicesToRemove;
+    std::sort( std::begin( indices ), std::end( indices ), std::greater<int>() );
+
+    std::cout << "RemoveSource" << std::endl;
+    for( auto index : indices )
+    {
+        std::cout << index << std::endl;
+        if( index < 0 || index >= static_cast<int>( m_sourcesYPositions.size() ) )
+        {
+            continue;
+        }
+        m_sourcesYPositions.erase( std::begin( m_sourcesYPositions ) + index );
+    }
+}

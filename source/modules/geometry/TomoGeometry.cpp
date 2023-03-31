@@ -303,7 +303,6 @@ TomoGeometry::TomoGeometry( const std::string & p_xmlGeometryFilePath )
         std::cout << R"(XML Error: "Camera/pixelHeight" element value problem: should not be zero )" << pixelHeightString << std::endl;
         return;
     }
-
     Size2D detectorsSize( pixelWidth, pixelHeight );
     auto referencesXmlElement = cameraXmlElement->FirstChildElement( "references" );
     if( referencesXmlElement == nullptr )
@@ -378,6 +377,7 @@ TomoGeometry::TomoGeometry( const std::string & p_xmlGeometryFilePath )
         auto roiCoordinates = glob::SentenceToWords( roiString );
         std::array<std::string, glob::TWO> bottomLeftCoordinatesString{ roiCoordinates[0], roiCoordinates[1] };
         std::array<std::string, glob::TWO> topRightCoordinatesString{ roiCoordinates[4], roiCoordinates[5] };
+
         auto currentRoiBottomLeftOptional = Pixel::FromStringArray( std::array<std::string, glob::TWO>{ roiCoordinates[0], roiCoordinates[1] } );
         if( !currentRoiBottomLeftOptional.has_value() )
         {
@@ -542,10 +542,10 @@ std::vector<int> TomoGeometry::projectionsPositionsIndices() const
 {
     return m_projections->GetProjectionPixelsIndices();
 }
-std::vector<PixelOnProjection> TomoGeometry::projectionIndiceAndPixels() const
-{
-    return m_projections->GetProjectionIndiceAndPixels();
-}
+// std::vector<PixelOnProjection> TomoGeometry::projectionIndiceAndPixels() const
+//{
+//     return m_projections->GetProjectionIndiceAndPixels();
+// }
 
 int TomoGeometry::nbProjectionsRois() const
 {
@@ -585,7 +585,27 @@ std::vector<int> TomoGeometry::projectionsRoisPositionsIndices() const
 {
     return m_projectionsRois->GetProjectionPixelsIndices();
 }
-std::vector<PixelOnProjection> TomoGeometry::projectionRoisIndiceAndPixels() const
+// std::vector<PixelOnProjection> TomoGeometry::projectionRoisIndiceAndPixels() const
+//{
+//     return m_projectionsRois->GetProjectionIndiceAndPixels();
+// }
+
+void TomoGeometry::PerformCheatingAdaptationsForDemonstration( std::vector<int> const & p_dataIndicesToRemove ) const
 {
-    return m_projectionsRois->GetProjectionIndiceAndPixels();
+    if( !p_dataIndicesToRemove.empty() )
+    {
+        m_table->RemoveSource( p_dataIndicesToRemove );
+        m_projections->RemoveProjection( p_dataIndicesToRemove );
+        m_projectionsRois->RemoveProjection( p_dataIndicesToRemove );
+    }
+
+    // volume resolution and size change
+    auto resolution = m_volume->GetSize3D();
+    resolution.z = 100;
+    m_volume->SetSizeAndUpdateWSize( resolution );
+
+    // projections resolution and pixel spacing change
+    m_projections->SetSizeAndUpdatePixelSpacing( Size2D( 3048, 3048 ) );
+
+    m_projectionsRois->SetSizeAndUpdateWSize( Size2D( 3048, 3048 ) );
 }

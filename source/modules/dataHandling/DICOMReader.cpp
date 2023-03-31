@@ -83,7 +83,7 @@ Result<ImageDataPtr> DICOMReader::Read( std::string const & p_dicomFilePath ) co
 }
 
 
-Result<ImageDataPtr> DICOMReader::ReadDirectory( std::string const & p_dicomFilesContainedDirPath ) const
+Result<ImageDataPtr> DICOMReader::ReadDirectory( std::string const & p_dicomFilesContainedDirPath, std::vector<int> const & p_indicesToRemove ) const
 {
     if( !std::filesystem::exists( p_dicomFilesContainedDirPath ) )
     {
@@ -152,10 +152,23 @@ Result<ImageDataPtr> DICOMReader::ReadDirectory( std::string const & p_dicomFile
         return p_imageA.acquisitionTime < p_imageB.acquisitionTime;
     } );
 
+    if( !p_indicesToRemove.empty() )
+    {
+        auto indices = p_indicesToRemove;
+        std::sort( std::begin( indices ), std::end( indices ), std::greater<int>() );
+
+        std::cout << "DICOMREADER" << std::endl;
+        for( auto index : indices )
+        {
+            std::cout << index << std::endl;
+            images.erase( std::begin( images ) + index );
+        }
+    }
     auto imagesAppender = vtkSmartPointer<vtkImageAppend>::New();
     imagesAppender->SetAppendAxis( 2 );
     for( auto const & currentImage : images )
     {
+        std::cout << "Ordered raw projections " << currentImage.fileName << std::endl;
         auto projectionData = currentImage.image;
         if( projectionData == nullptr )
         {

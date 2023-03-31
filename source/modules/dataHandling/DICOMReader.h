@@ -4,6 +4,7 @@
 #include "commons/Result.h"
 
 #include <string>
+#include <vector>
 
 class TomoGeometry;
 class DICOMReader
@@ -13,7 +14,7 @@ public:
     DICOMReader( TomoGeometry * p_tomoGeometry );
 
     Result<ImageDataPtr> Read( std::string const & p_dicomFilePath ) const;
-    Result<ImageDataPtr> ReadDirectory( std::string const & p_dicomFilesContainedDirPath ) const;
+    Result<ImageDataPtr> ReadDirectory( std::string const & p_dicomFilesContainedDirPath, std::vector<int> const & p_indicesToRemove ) const;
 
 private:
     struct ImageDataPtrAndTimeStamp

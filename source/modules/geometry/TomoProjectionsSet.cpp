@@ -141,10 +141,10 @@ std::vector<int> TomoProjectionsSet::GetProjectionPixelsIndices() const
 {
     return m_projectionPixelsIndices;
 }
-std::vector<PixelOnProjection> TomoProjectionsSet::GetProjectionIndiceAndPixels() const
-{
-    return m_projectionIndiceAndPixels;
-}
+// std::vector<PixelOnProjection> TomoProjectionsSet::GetProjectionIndiceAndPixels() const
+//{
+//     return m_projectionIndiceAndPixels;
+// }
 int TomoProjectionsSet::GetNProjections() const
 {
     return m_nProjections;
@@ -155,7 +155,7 @@ Position2D TomoProjectionsSet::GetPosition( int p_projectionIndex, Pixel p_pixel
 }
 Pixel TomoProjectionsSet::GetPixel( int p_projectionIndex, Position2D p_pixelPosition ) const
 {
-    Pixel pixel(0,0);
+    Pixel pixel( 0, 0 );
     pixel.x = static_cast<int>( ( p_pixelPosition.x - m_bottomLeftPositions.at( p_projectionIndex ).x ) / m_pixelSpacing.x );
     pixel.y = static_cast<int>( ( p_pixelPosition.y - m_bottomLeftPositions.at( p_projectionIndex ).y ) / m_pixelSpacing.y );
     return pixel;
@@ -196,6 +196,7 @@ void TomoProjectionsSet::UpdatePositions()
 
     m_projectionPositions.clear();
     m_projectionPixelsIndices.clear();
+    // m_projectionIndiceAndPixels.clear();
     for( auto projectionIndex{ 0 }; projectionIndex < m_nProjections; projectionIndex++ )
     {
         for( auto yIndex{ 0 }; yIndex < m_size.y; yIndex++ )
@@ -204,11 +205,30 @@ void TomoProjectionsSet::UpdatePositions()
             {
                 m_projectionPixelsIndices.push_back( projectionPixelIndex );
                 m_projectionPositions.push_back( Position2D( m_xPositions[projectionIndex][xIndex], m_yPositions[projectionIndex][yIndex] ) );
-                m_projectionIndiceAndPixels.push_back( PixelOnProjection( Pixel( xIndex, yIndex ), projectionIndex ) );
+                // m_projectionIndiceAndPixels.push_back( PixelOnProjection( Pixel( xIndex, yIndex ), projectionIndex ) );
                 projectionPixelIndex++;
             }
         }
     }
+}
+
+void TomoProjectionsSet::RemoveProjection( std::vector<int> const & p_dataIndicesToRemove )
+{
+    auto indices = p_dataIndicesToRemove;
+    std::sort( std::begin( indices ), std::end( indices ), std::greater<int>() );
+    std::cout << "RemoveProjection" << std::endl;
+    for( auto index : indices )
+    {
+        std::cout << index << std::endl;
+        if( index < 0 || index >= m_nProjections )
+        {
+            continue;
+        }
+        m_bottomLeftPositions.erase( std::begin( m_bottomLeftPositions ) + index );
+    }
+    m_nProjections = static_cast<int>( m_bottomLeftPositions.size() );
+
+    this->UpdatePositions();
 }
 
 void TomoProjectionsSet::UpdateWSize()
@@ -218,12 +238,12 @@ void TomoProjectionsSet::UpdateWSize()
 void TomoProjectionsSet::UpdateSize()
 {
     bool fake;
-    m_size = Size2D::FromPixelSpacingAndSizeInWorld( m_pixelSpacing, m_wSize, fake);
+    m_size = Size2D::FromPixelSpacingAndSizeInWorld( m_pixelSpacing, m_wSize, fake );
 }
 void TomoProjectionsSet::UpdatePixelSpacing()
 {
     bool fake;
-    m_pixelSpacing = PixelSpacing::FromSizes( m_size, m_wSize, fake);
+    m_pixelSpacing = PixelSpacing::FromSizes( m_size, m_wSize, fake );
 }
 
 inline bool operator==( TomoProjectionsSet const & p_tomoProjectionsSetA, TomoProjectionsSet const & p_tomoProjectionsSetB )
